@@ -1,0 +1,15 @@
+# Vercel
+.vercel/
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+
+# Google Apps Script local metadata
+backend-gas/.clasp.json
+
+# OS
+.DS_Store
+Thumbs.db
