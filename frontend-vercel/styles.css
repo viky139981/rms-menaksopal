@@ -3192,3 +3192,167 @@ body{
     grid-template-columns:1fr;
   }
 }
+/* ============================================================
+   MLN DARK CORE V8.1 — TOPBAR / HEADER SCALE FIX
+   Memperbesar breadcrumb, subtitle, search, dan identitas user.
+   ============================================================ */
+
+@media(min-width:992px){
+
+  .topbar{
+    height:82px !important;
+    padding:0 34px !important;
+  }
+
+  .topbar-left{
+    gap:14px !important;
+  }
+
+  .topbar-context{
+    line-height:1.2 !important;
+    min-width:360px;
+  }
+
+  .topbar-breadcrumb{
+    font-size:13px !important;
+    font-weight:800 !important;
+    letter-spacing:.075em !important;
+  }
+
+  .topbar-breadcrumb span{
+    margin:0 8px !important;
+  }
+
+  .topbar-breadcrumb b{
+    font-size:13px !important;
+  }
+
+  .topbar-subtitle{
+    margin-top:6px !important;
+    font-size:16px !important;
+    font-weight:700 !important;
+    line-height:1.25 !important;
+    color:#c1cddd !important;
+  }
+
+  .topbar-actions{
+    gap:16px !important;
+  }
+
+  .top-search{
+    width:390px !important;
+    height:48px !important;
+    padding:0 14px !important;
+    gap:9px !important;
+    border-radius:12px !important;
+  }
+
+  .top-search>i{
+    font-size:16px !important;
+  }
+
+  .top-search input{
+    font-size:14px !important;
+  }
+
+  .top-search-key{
+    padding:4px 7px !important;
+    font-size:10px !important;
+    border-radius:6px !important;
+  }
+
+  .top-user{
+    min-height:50px !important;
+    padding:6px 11px 6px 7px !important;
+    gap:10px !important;
+    border-radius:26px !important;
+  }
+
+  .top-user-avatar{
+    width:38px !important;
+    height:38px !important;
+    font-size:14px !important;
+  }
+
+  .top-user-copy{
+    min-width:132px !important;
+    line-height:1.2 !important;
+  }
+
+  .top-user-line{
+    gap:6px !important;
+  }
+
+  .top-user-copy span{
+    font-size:13px !important;
+    font-weight:800 !important;
+  }
+
+  .top-user-copy>small{
+    margin-top:3px !important;
+    font-size:10px !important;
+    color:#8393a8 !important;
+  }
+
+  .user-role-badge{
+    padding:3px 6px !important;
+    font-size:8px !important;
+    border-radius:5px !important;
+  }
+
+  .logout-btn{
+    width:34px !important;
+    height:34px !important;
+    font-size:15px !important;
+  }
+}
+
+/* Laptop / layar menengah */
+@media(min-width:992px) and (max-width:1350px){
+
+  .topbar{
+    height:76px !important;
+    padding:0 24px !important;
+  }
+
+  .topbar-context{
+    min-width:280px;
+  }
+
+  .topbar-breadcrumb{
+    font-size:11.5px !important;
+  }
+
+  .topbar-breadcrumb b{
+    font-size:11.5px !important;
+  }
+
+  .topbar-subtitle{
+    font-size:14px !important;
+  }
+
+  .top-search{
+    width:300px !important;
+    height:44px !important;
+  }
+
+  .top-search input{
+    font-size:13px !important;
+  }
+}
+
+/* Tablet / mobile */
+@media(max-width:991px){
+
+  .topbar{
+    min-height:68px !important;
+  }
+
+  .topbar-breadcrumb{
+    font-size:10px !important;
+  }
+
+  .topbar-subtitle{
+    font-size:12px !important;
+  }
+}
