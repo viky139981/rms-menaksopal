@@ -2306,320 +2306,889 @@ body{
     flex-direction:column;
   }
 }
-/* =========================
-   UI SCALE UP / BIGGER LAYOUT
-   Tempel paling bawah styles.css
-   ========================= */
-
-:root{
-  --sidebar-w: 280px;
-  --topbar-h: 72px;
-  --content-pad: 28px;
-  --radius-lg: 20px;
-  --radius-md: 16px;
-}
+/* ============================================================
+   MLN DARK CORE V8 — FINAL PROFESSIONAL SCALE
+   Fokus: keterbacaan desktop 1366–1920px tanpa membuat UI sesak.
+   ============================================================ */
 
 html{
-  font-size: 16px;
+  font-size:16px;
 }
 
 body{
-  font-size: 15px;
-  line-height: 1.5;
+  font-size:15px;
+  line-height:1.5;
 }
 
-/* Layout utama */
-.sidebar{
-  width: var(--sidebar-w) !important;
-  padding: 20px 16px !important;
-}
+/* ---------- DESKTOP CORE ---------- */
+@media(min-width:992px){
 
-.main{
-  margin-left: var(--sidebar-w) !important;
-  min-height: 100vh;
-}
-
-.topbar{
-  height: var(--topbar-h) !important;
-  padding: 0 24px !important;
-}
-
-.content{
-  padding: var(--content-pad) !important;
-}
-
-.container{
-  max-width: 1600px;
-}
-
-/* Branding sidebar */
-.sidebar .brand{
-  padding: 14px 14px 24px !important;
-}
-
-.sidebar .brand strong{
-  font-size: 24px !important;
-  line-height: 1.2 !important;
-}
-
-.sidebar .brand span{
-  font-size: 13px !important;
-}
-
-/* Judul section menu */
-.nav-section{
-  font-size: 11px !important;
-  letter-spacing: .18em !important;
-  margin: 20px 12px 10px !important;
-}
-
-/* Menu sidebar */
-.nav-item{
-  padding: 14px 16px !important;
-  font-size: 15px !important;
-  border-radius: 14px !important;
-  margin-bottom: 6px !important;
-}
-
-.nav-item i{
-  font-size: 15px !important;
-}
-
-.device-sub{
-  margin-left: 18px !important;
-  padding-left: 16px !important;
-  font-size: 14px !important;
-}
-
-.device-sub i{
-  font-size: 14px !important;
-}
-
-/* Header page */
-.page-title{
-  font-size: 38px !important;
-  line-height: 1.15 !important;
-  margin-bottom: 8px !important;
-}
-
-.page-sub{
-  font-size: 15px !important;
-  line-height: 1.5 !important;
-}
-
-/* Toolbar */
-.toolbar{
-  gap: 14px !important;
-  margin: 18px 0 !important;
-}
-
-.toolbar .left,
-.toolbar .right{
-  gap: 12px !important;
-}
-
-/* Card umum */
-.cardx,
-.kpi,
-.table-responsive{
-  border-radius: var(--radius-lg) !important;
-}
-
-.cardx{
-  padding: 24px !important;
-}
-
-/* KPI cards */
-.kpi{
-  padding: 24px !important;
-  min-height: 138px !important;
-}
-
-.kpi .label{
-  font-size: 12px !important;
-  letter-spacing: .12em !important;
-}
-
-.kpi .value{
-  font-size: 42px !important;
-  line-height: 1 !important;
-  margin-top: 14px !important;
-}
-
-.kpi .sub,
-.kpi small{
-  font-size: 14px !important;
-}
-
-/* Statistik horizontal */
-.summary-mini,
-.mini-stat,
-.stat-row{
-  min-height: 86px !important;
-  padding: 18px 20px !important;
-}
-
-/* Tabel */
-.table{
-  font-size: 14px !important;
-}
-
-.table th{
-  font-size: 13px !important;
-  padding: 14px 12px !important;
-}
-
-.table td{
-  font-size: 14px !important;
-  padding: 14px 12px !important;
-  line-height: 1.45 !important;
-}
-
-.table td .sub,
-.table td small{
-  font-size: 12px !important;
-}
-
-/* Badge / status */
-.badge-soft{
-  padding: 7px 12px !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-}
-
-/* Button */
-.btn{
-  min-height: 46px !important;
-  padding: 12px 18px !important;
-  font-size: 14px !important;
-  border-radius: 12px !important;
-}
-
-/* Form */
-.form-label{
-  font-size: 14px !important;
-  margin-bottom: 8px !important;
-}
-
-.form-control,
-.form-select,
-textarea,
-input,
-select{
-  min-height: 48px !important;
-  padding: 12px 14px !important;
-  font-size: 15px !important;
-  border-radius: 12px !important;
-}
-
-textarea{
-  min-height: 110px !important;
-}
-
-/* Modal */
-.modal-content{
-  border-radius: 22px !important;
-}
-
-.modal-header{
-  padding: 22px 24px !important;
-}
-
-.modal-body{
-  padding: 22px 24px !important;
-}
-
-.modal-footer{
-  padding: 18px 24px 22px !important;
-}
-
-.modal-title{
-  font-size: 18px !important;
-}
-
-/* Login */
-.login-page{
-  gap: 0 !important;
-  grid-template-columns: 1.05fr 0.95fr !important;
-}
-
-.login-card{
-  width: min(1080px, 94vw) !important;
-  min-height: 640px !important;
-  border-radius: 28px !important;
-}
-
-.login-card .brand-title,
-.login-card h1,
-.login-card h2{
-  font-size: 28px !important;
-  line-height: 1.2 !important;
-}
-
-.login-card p{
-  font-size: 15px !important;
-}
-
-/* Search topbar */
-.topbar .search,
-.topbar input[type="search"]{
-  min-height: 44px !important;
-  font-size: 14px !important;
-}
-
-/* Avatar/profile kanan atas */
-.topbar .profile,
-.topbar .userbox{
-  min-height: 46px !important;
-  padding: 8px 12px !important;
-}
-
-/* Chart area lebih besar */
-canvas{
-  max-width: 100%;
-}
-
-.chart-card,
-.chart-panel,
-.dashboard-chart,
-.card-chart{
-  min-height: 380px !important;
-}
-
-/* Responsive */
-@media (max-width: 1200px){
-  .page-title{
-    font-size: 32px !important;
-  }
-
-  .kpi .value{
-    font-size: 36px !important;
-  }
-}
-
-@media (max-width: 991px){
-  .main{
-    margin-left: 0 !important;
-  }
-
+  /* Shell */
   .sidebar{
-    width: 280px !important;
+    width:278px;
   }
 
+  .main{
+    margin-left:278px;
+  }
+
+  .sidebar .brand{
+    min-height:82px;
+    padding:16px 17px;
+    gap:13px;
+  }
+
+  .brand-logo{
+    width:46px;
+    height:46px;
+    border-radius:12px;
+    font-size:20px;
+  }
+
+  .sidebar .brand strong{
+    font-size:16px;
+    line-height:1.25;
+  }
+
+  .sidebar .brand span{
+    margin-top:4px;
+    font-size:10.5px;
+    line-height:1.35;
+  }
+
+  .sidebar-nav{
+    padding:14px 10px 108px;
+  }
+
+  .nav-section{
+    margin:18px 12px 9px;
+    font-size:9px;
+    letter-spacing:.15em;
+  }
+
+  .nav-section-spaced{
+    margin-top:23px;
+  }
+
+  .nav-item{
+    min-height:44px;
+    margin:4px 0;
+    padding:11px 13px;
+    gap:12px;
+    border-radius:10px;
+    font-size:13.5px;
+  }
+
+  .nav-item i{
+    width:20px;
+    font-size:15.5px;
+  }
+
+  .nav-chevron{
+    font-size:11px!important;
+  }
+
+  .device-sub{
+    min-height:39px;
+    margin-left:24px;
+    padding:9px 11px 9px 14px;
+    font-size:12px;
+  }
+
+  .device-sub i{
+    font-size:12px;
+  }
+
+  .sidebar-core-status{
+    left:10px;
+    right:16px;
+    bottom:15px;
+    min-height:58px;
+    padding:11px 13px;
+    gap:10px;
+    border-radius:11px;
+  }
+
+  .core-status-dot{
+    width:8px;
+    height:8px;
+  }
+
+  .sidebar-core-status strong{
+    font-size:10.5px;
+  }
+
+  .sidebar-core-status span{
+    margin-top:3px;
+    font-size:9px;
+  }
+
+  /* Topbar */
+  .topbar{
+    height:68px;
+    padding:0 30px;
+  }
+
+  .topbar-breadcrumb{
+    font-size:10px;
+    letter-spacing:.07em;
+  }
+
+  .topbar-subtitle{
+    margin-top:4px;
+    font-size:13px;
+  }
+
+  .top-search{
+    width:330px;
+    height:42px;
+    padding:0 12px;
+    border-radius:11px;
+  }
+
+  .top-search>i{
+    font-size:14px;
+  }
+
+  .top-search input{
+    font-size:12px;
+  }
+
+  .top-search-key{
+    padding:3px 6px;
+    font-size:9px;
+  }
+
+  .top-user{
+    min-height:44px;
+    padding:5px 9px 5px 6px;
+    gap:9px;
+    border-radius:22px;
+  }
+
+  .top-user-avatar{
+    width:34px;
+    height:34px;
+    font-size:13px;
+  }
+
+  .top-user-copy{
+    min-width:112px;
+  }
+
+  .top-user-copy span{
+    font-size:11px;
+  }
+
+  .top-user-copy>small{
+    margin-top:2px;
+    font-size:8.5px;
+  }
+
+  .user-role-badge{
+    padding:2px 5px;
+    font-size:7px!important;
+  }
+
+  .logout-btn{
+    width:31px;
+    height:31px;
+    font-size:13px;
+  }
+
+  /* Main content */
   .content{
-    padding: 20px !important;
+    width:100%;
+    max-width:1620px;
+    padding:34px 38px 48px;
   }
 
   .page-title{
-    font-size: 28px !important;
+    font-size:29px;
+    line-height:1.15;
   }
 
-  .login-page{
-    grid-template-columns: 1fr !important;
+  .page-sub{
+    margin-top:7px;
+    font-size:13px;
+  }
+
+  .overview-head{
+    margin-bottom:26px;
+  }
+
+  .overview-title-row{
+    gap:12px;
+  }
+
+  .overview-chip{
+    height:27px;
+    padding:0 13px;
+    font-size:9.5px;
+  }
+
+  .overview-meta{
+    padding:9px 13px;
+    gap:7px;
+    font-size:9.5px;
+  }
+
+  .live-dot{
+    width:7px;
+    height:7px;
+  }
+
+  /* Dashboard KPI */
+  .dashboard-kpis{
+    gap:16px;
+  }
+
+  .stat-card{
+    min-height:166px;
+    padding:20px 19px 18px;
+    border-radius:15px;
+  }
+
+  .stat-label{
+    max-width:140px;
+    font-size:10px;
+    line-height:1.35;
+  }
+
+  .stat-icon{
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    font-size:17px;
+  }
+
+  .stat-value{
+    margin:19px 0 7px;
+    font-size:36px;
+  }
+
+  .stat-note{
+    font-size:11px;
+    line-height:1.35;
+  }
+
+  /* Mini KPI */
+  .dashboard-mini-grid{
+    gap:16px;
+    margin-top:21px;
+  }
+
+  .mini-stat{
+    min-height:82px;
+    padding:15px 18px;
+    border-radius:13px;
+  }
+
+  .mini-stat .mini-icon{
+    width:46px;
+    height:46px;
+    border-radius:10px;
+    font-size:18px;
+  }
+
+  .mini-stat>div{
+    gap:9px;
+  }
+
+  .mini-stat b{
+    font-size:26px;
+  }
+
+  .mini-stat small{
+    font-size:11px;
+  }
+
+  /* Dashboard panels */
+  .dashboard-grid-main{
+    gap:22px;
+    margin-top:23px;
+    grid-template-columns:minmax(0,.84fr) minmax(0,1.16fr);
+  }
+
+  .dashboard-panel{
+    height:430px;
+    padding:22px 23px 0;
+    border-radius:15px;
+  }
+
+  .panel-head{
+    margin-bottom:16px;
+    padding-bottom:16px;
+  }
+
+  .panel-head h6{
+    font-size:12px;
+  }
+
+  .panel-head small{
+    margin-top:4px;
+    font-size:10px;
+  }
+
+  .panel-head>i,
+  .panel-head-right>i{
+    font-size:17px;
+  }
+
+  .panel-count-badge{
+    padding:5px 9px;
+    font-size:9.5px;
+  }
+
+  .device-summary-layout{
+    grid-template-columns:minmax(0,1fr) 150px;
+    gap:22px;
+  }
+
+  .donut-shell{
+    height:255px;
+  }
+
+  .donut-center strong{
+    font-size:34px;
+  }
+
+  .donut-center span{
+    margin-top:6px;
+    font-size:8.5px;
+  }
+
+  .dash-legend{
+    gap:9px;
+  }
+
+  .dash-legend-row{
+    min-height:34px;
+    grid-template-columns:9px 1fr auto;
+    gap:8px;
+    padding:6px 9px;
+    border-radius:7px;
+  }
+
+  .dash-legend-dot{
+    width:9px;
+    height:9px;
+  }
+
+  .dash-legend-name,
+  .dash-legend-row strong{
+    font-size:11px;
+  }
+
+  .chart-site-wrap{
+    padding-top:5px;
+  }
+
+  .panel-footer{
+    min-height:48px;
+    margin-top:9px;
+    font-size:10px;
+  }
+
+  .panel-footer button{
+    font-size:10px;
+  }
+
+  /* Generic cards / toolbars */
+  .cardx,
+  .device-management-card,
+  .site-management-card{
+    padding:24px;
+    border-radius:15px;
+  }
+
+  .toolbar{
+    gap:14px;
+  }
+
+  .toolbar .left,
+  .toolbar .right{
+    gap:11px;
+  }
+
+  /* Buttons */
+  .btn{
+    min-height:44px;
+    padding:9px 15px;
+    border-radius:10px;
+    font-size:13px;
+  }
+
+  .btn-sm{
+    min-height:34px;
+    padding:6px 10px;
+    border-radius:9px;
+    font-size:11px;
+  }
+
+  /* Forms */
+  .form-label{
+    margin-bottom:8px;
+    font-size:14px;
+  }
+
+  .form-control,
+  .form-select{
+    min-height:50px;
+    padding:12px 14px;
+    border-radius:11px;
+    font-size:14px;
+  }
+
+  textarea.form-control{
+    min-height:112px;
+    line-height:1.5;
+  }
+
+  .form-text{
+    margin-top:7px;
+    font-size:11px;
+  }
+
+  .input-group-text{
+    min-width:48px;
+    font-size:14px;
+  }
+
+  /* Tables */
+  .table th{
+    padding:14px 14px;
+    font-size:11.5px;
+    line-height:1.35;
+  }
+
+  .table td{
+    padding:14px 14px;
+    font-size:13px;
+    line-height:1.45;
+  }
+
+  .table td small{
+    font-size:11px;
+  }
+
+  .badge-soft{
+    padding:7px 10px;
+    font-size:10px;
+  }
+
+  /* Device/Site overview blocks */
+  .device-summary-strip{
+    gap:13px;
+  }
+
+  .device-summary-strip>div{
+    min-width:180px;
+    padding:14px 17px;
+    border-radius:13px;
+  }
+
+  .device-summary-strip strong{
+    font-size:27px;
+  }
+
+  .device-summary-label{
+    font-size:10px;
+  }
+
+  .device-city-list,
+  .site-group-list{
+    gap:14px;
+  }
+
+  .device-city-toggle,
+  .site-group-toggle{
+    min-height:74px;
+    padding:16px 18px;
+  }
+
+  .device-city-icon,
+  .site-group-icon{
+    width:48px;
+    height:48px;
+    border-radius:12px;
+    font-size:20px;
+  }
+
+  .device-city-copy strong,
+  .site-group-copy strong{
+    font-size:15px;
+  }
+
+  .device-city-copy small,
+  .site-group-copy small{
+    margin-top:4px;
+    font-size:11px;
+  }
+
+  .device-location-count,
+  .site-count-badge{
+    padding:8px 11px;
+    font-size:10.5px;
+  }
+
+  .device-city-chevron,
+  .site-chevron,
+  .device-location-chevron{
+    width:34px;
+    height:34px;
+  }
+
+  .device-location-toggle{
+    min-height:64px;
+    padding:13px 16px;
+  }
+
+  .device-location-icon{
+    width:41px;
+    height:41px;
+    border-radius:10px;
+    font-size:16px;
+  }
+
+  .device-location-copy strong{
+    font-size:13.5px;
+  }
+
+  .device-location-copy small{
+    margin-top:3px;
+    font-size:11px;
+  }
+
+  .device-count-badge{
+    padding:7px 10px;
+    font-size:10px;
+  }
+
+  .device-city-body,
+  .site-group-body{
+    padding:14px;
+  }
+
+  .device-location-body{
+    padding:12px;
+  }
+
+  /* Modal */
+  .modal-xl{
+    --bs-modal-width:1160px;
+  }
+
+  .modal-content{
+    border-radius:17px;
+  }
+
+  .modal-header{
+    min-height:72px;
+    padding:19px 23px;
+  }
+
+  .modal-title{
+    font-size:22px;
+  }
+
+  .modal-body{
+    padding:24px 23px;
+  }
+
+  .modal-footer{
+    padding:16px 23px;
+  }
+
+  /* Login */
+  .login-shell{
+    max-width:1140px;
   }
 
   .login-card{
-    width: min(96vw, 720px) !important;
-    min-height: auto !important;
+    padding:58px;
+  }
+
+  .login-card h2{
+    font-size:34px;
+  }
+
+  .login-caption{
+    font-size:15px;
+  }
+
+  /* Ticket module */
+  .ticket-module-chip{
+    padding:5px 9px;
+    font-size:9.5px;
+  }
+
+  .ticket-kpi-grid{
+    gap:14px;
+    margin-bottom:20px;
+  }
+
+  .ticket-kpi{
+    min-height:108px;
+    padding:17px 18px;
+    border-radius:14px;
+  }
+
+  .ticket-kpi span{
+    font-size:10px;
+  }
+
+  .ticket-kpi strong{
+    margin-top:10px;
+    font-size:31px;
+  }
+
+  .ticket-kpi>i{
+    width:43px;
+    height:43px;
+    border-radius:11px;
+    font-size:18px;
+  }
+
+  .ticket-list-card{
+    padding:21px;
+  }
+
+  .ticket-filterbar{
+    grid-template-columns:minmax(320px,1fr) 190px 205px auto auto;
+    gap:11px;
+    margin-bottom:18px;
+  }
+
+  .ticket-number-link{
+    font-size:12.5px;
+  }
+
+  .ticket-row-sub{
+    margin-top:4px;
+    font-size:10.5px;
+  }
+
+  .ticket-severity,
+  .ticket-status{
+    min-height:27px;
+    padding:5px 9px;
+    border-radius:8px;
+    font-size:9.5px;
+  }
+
+  .ticket-detail-hero{
+    padding:19px;
+  }
+
+  .ticket-detail-hero h4{
+    font-size:23px;
+  }
+
+  .ticket-detail-meta{
+    font-size:11px;
+  }
+
+  .ticket-detail-number{
+    font-size:13px;
+  }
+
+  .ticket-detail-grid{
+    gap:11px;
+  }
+
+  .ticket-detail-item{
+    min-height:76px;
+    padding:14px;
+  }
+
+  .ticket-detail-item span{
+    font-size:10px;
+  }
+
+  .ticket-detail-item strong{
+    margin-top:7px;
+    font-size:12.5px;
+  }
+
+  .ticket-detail-section{
+    padding:16px 17px;
+  }
+
+  .ticket-detail-section h6{
+    margin-bottom:10px;
+    font-size:10.5px;
+  }
+
+  .ticket-detail-section p{
+    font-size:12.5px;
+  }
+
+  .ticket-history-head span{
+    font-size:10px;
+  }
+
+  .ticket-timeline-top>span{
+    font-size:9.5px;
+  }
+
+  .ticket-timeline-body{
+    padding:12px 14px;
+  }
+
+  .ticket-timeline-body p{
+    font-size:11.5px;
+  }
+
+  .ticket-timeline-body small{
+    font-size:9.5px;
+  }
+}
+
+/* ---------- LARGE DESKTOP ---------- */
+@media(min-width:1500px){
+  .content{
+    max-width:1680px;
+    padding-left:42px;
+    padding-right:42px;
+  }
+
+  .dashboard-panel{
+    height:450px;
+  }
+
+  .donut-shell{
+    height:270px;
+  }
+}
+
+/* ---------- MID DESKTOP ---------- */
+@media(min-width:992px) and (max-width:1250px){
+  .sidebar{
+    width:250px;
+  }
+
+  .main{
+    margin-left:250px;
+  }
+
+  .content{
+    padding:28px 26px 40px;
+  }
+
+  .dashboard-kpis{
+    grid-template-columns:repeat(3,1fr);
+  }
+
+  .dashboard-grid-main{
+    grid-template-columns:1fr;
+  }
+
+  .dashboard-panel{
+    height:420px;
+  }
+
+  .ticket-kpi-grid{
+    grid-template-columns:repeat(3,1fr);
+  }
+}
+
+/* ---------- TABLET ---------- */
+@media(max-width:991px){
+  .main{
+    margin-left:0;
+  }
+
+  .sidebar{
+    width:280px;
+  }
+
+  .content{
+    max-width:none;
+    padding:22px 18px 34px;
+  }
+
+  .page-title{
+    font-size:26px;
+  }
+
+  .page-sub{
+    font-size:12px;
+  }
+
+  .dashboard-kpis{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .dashboard-grid-main{
+    grid-template-columns:1fr;
+  }
+
+  .dashboard-panel{
+    height:400px;
+  }
+
+  .table th{
+    font-size:11px;
+  }
+
+  .table td{
+    font-size:12px;
+  }
+}
+
+/* ---------- MOBILE ---------- */
+@media(max-width:700px){
+  body{
+    font-size:14px;
+  }
+
+  .content{
+    padding:18px 13px 28px;
+  }
+
+  .page-title{
+    font-size:24px;
+  }
+
+  .dashboard-kpis{
+    grid-template-columns:1fr;
+  }
+
+  .dashboard-mini-grid{
+    grid-template-columns:1fr;
+  }
+
+  .stat-card{
+    min-height:142px;
+  }
+
+  .dashboard-panel{
+    height:auto;
+    min-height:360px;
+  }
+
+  .device-summary-layout{
+    grid-template-columns:1fr;
+  }
+
+  .donut-shell{
+    height:220px;
+  }
+
+  .dash-legend{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .ticket-kpi-grid{
+    grid-template-columns:1fr;
+  }
+
+  .ticket-filterbar{
+    grid-template-columns:1fr;
+  }
+
+  .ticket-detail-grid{
+    grid-template-columns:1fr;
   }
 }
