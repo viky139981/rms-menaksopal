@@ -51,6 +51,11 @@ const API_ACTIONS = Object.freeze({
 
   getSettings: (...args) => getSettings(...args),
 
+  getMyAppearanceSettings: (...args) =>
+    getMyAppearanceSettings(...args),
+  saveMyAppearanceSettings: (...args) =>
+    saveMyAppearanceSettings(...args),
+
   listIncidentTickets: (...args) => listIncidentTickets(...args),
   getIncidentTicket: (...args) => getIncidentTicket(...args),
   saveIncidentTicket: (...args) => saveIncidentTicket(...args),
