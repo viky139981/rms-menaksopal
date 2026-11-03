@@ -524,7 +524,23 @@ function toggleDeviceMenu() {
   }
 }
 
-function setTitle(t,s=''){ $('#topTitle').textContent=t;$('#topSub').textContent=s;document.querySelectorAll('.nav-item').forEach(a=>a.classList.toggle('active',a.dataset.page===state.page))}
+function setTitle(t,s=''){
+  $('#topTitle').textContent=t;
+  $('#topSub').textContent=s;
+  document.querySelectorAll('.nav-item').forEach(
+    a=>a.classList.toggle('active',a.dataset.page===state.page)
+  );
+
+  window.dispatchEvent(
+    new CustomEvent('mln:page-change',{
+      detail:{
+        page:state.page,
+        title:t,
+        subtitle:s
+      }
+    })
+  );
+}
 
 async function navigate(page) {
   state.page = page;
@@ -1465,6 +1481,19 @@ async function renderDashboard(){
     err(r);
 
     const d = r.data || {};
+
+    window.dispatchEvent(
+      new CustomEvent('mln:dashboard-metrics',{
+        detail:{
+          totalDevices:Number(d.totalDevices || 0),
+          devicesInDataCenter:Number(d.devicesInDataCenter || 0),
+          totalDataCenters:Number(d.totalDataCenters || 0),
+          pendingPermits:Number(d.pendingPermits || 0),
+          deviceInThisMonth:Number(d.deviceInThisMonth || 0),
+          deviceOutThisMonth:Number(d.deviceOutThisMonth || 0)
+        }
+      })
+    );
 
     const typeLabels =
       Object.keys(

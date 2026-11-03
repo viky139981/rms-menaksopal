@@ -3356,3 +3356,234 @@ body{
     font-size:12px !important;
   }
 }
+/* ============================================================
+   MLN DARK CORE V9 — THREE.JS CORE NETWORK
+   ============================================================ */
+
+.three-core-layer{
+  pointer-events:none;
+  user-select:none;
+  overflow:hidden;
+}
+
+.three-core-canvas{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+  display:block;
+}
+
+.three-core-fallback{
+  background:
+    radial-gradient(
+      circle at 68% 48%,
+      rgba(43,211,238,.07),
+      transparent 25%
+    ),
+    radial-gradient(
+      circle at 72% 55%,
+      rgba(108,99,255,.06),
+      transparent 35%
+    );
+}
+
+/* LOGIN 3D CORE */
+.login-brand-panel{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+}
+
+.three-login-core{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  opacity:.92;
+  filter:
+    saturate(1.18)
+    contrast(1.03);
+}
+
+.login-brand-panel::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(11,15,26,.36),
+      rgba(11,15,26,.08) 55%,
+      rgba(11,15,26,.24)
+    ),
+    radial-gradient(
+      circle at 72% 58%,
+      transparent 0 23%,
+      rgba(9,13,22,.12) 52%,
+      rgba(9,13,22,.46) 100%
+    );
+}
+
+.login-brand-panel > *:not(.three-login-core){
+  position:relative;
+  z-index:2;
+}
+
+.login-brand-mark{
+  box-shadow:
+    0 12px 35px rgba(55,48,160,.22),
+    0 0 24px rgba(41,225,246,.10);
+}
+
+/* APP CORE BACKGROUND */
+.main{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+}
+
+.three-app-core{
+  position:absolute;
+  inset:68px 0 0 0;
+  z-index:0;
+  opacity:.16;
+  transition:
+    opacity .35s ease,
+    filter .35s ease;
+  mask-image:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,.92),
+      rgba(0,0,0,.70) 42%,
+      rgba(0,0,0,.28) 82%,
+      transparent
+    );
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,.92),
+      rgba(0,0,0,.70) 42%,
+      rgba(0,0,0,.28) 82%,
+      transparent
+    );
+}
+
+.three-app-core.is-dashboard{
+  opacity:.33;
+  filter:
+    saturate(1.18)
+    brightness(1.08);
+}
+
+.three-app-core.is-secondary-page{
+  opacity:.11;
+  filter:
+    saturate(.92)
+    brightness(.82);
+}
+
+.main > .topbar,
+.main > .content{
+  position:relative;
+  z-index:2;
+}
+
+.content{
+  background:transparent;
+}
+
+/* Give dashboard panels enough opacity to preserve readability */
+.dashboard-panel,
+.stat-card,
+.mini-stat,
+.cardx,
+.device-management-card,
+.site-management-card,
+.ticket-kpi,
+.ticket-list-card{
+  backdrop-filter:
+    blur(1.5px);
+  -webkit-backdrop-filter:
+    blur(1.5px);
+}
+
+/* Soft network glow around Overview header */
+.overview-head{
+  position:relative;
+}
+
+.overview-head::after{
+  content:"";
+  position:absolute;
+  width:300px;
+  height:120px;
+  right:10%;
+  top:-34px;
+  z-index:-1;
+  pointer-events:none;
+  border-radius:50%;
+  background:
+    radial-gradient(
+      ellipse,
+      rgba(35,207,237,.08),
+      rgba(94,85,255,.035) 48%,
+      transparent 72%
+    );
+  filter:blur(8px);
+}
+
+/* Core Network Sync gets a more alive but CSS-light status */
+.core-status-dot{
+  animation:
+    mln-core-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mln-core-pulse{
+  0%,100%{
+    transform:scale(1);
+    opacity:.82;
+    box-shadow:
+      0 0 8px rgba(56,230,170,.55);
+  }
+  50%{
+    transform:scale(1.28);
+    opacity:1;
+    box-shadow:
+      0 0 15px rgba(56,230,170,.95);
+  }
+}
+
+/* Performance / accessibility */
+@media(prefers-reduced-motion: reduce){
+  .three-login-core,
+  .three-app-core{
+    opacity:.08!important;
+  }
+
+  .core-status-dot{
+    animation:none!important;
+  }
+}
+
+@media(max-width:991px){
+  .three-app-core{
+    inset:68px 0 0 0;
+    opacity:.10;
+  }
+
+  .three-app-core.is-dashboard{
+    opacity:.18;
+  }
+}
+
+@media(max-width:767px){
+  .three-login-core{
+    opacity:.48;
+  }
+
+  .three-app-core{
+    display:none;
+  }
+}
