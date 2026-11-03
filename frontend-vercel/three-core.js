@@ -1,18 +1,36 @@
 import * as THREE from 'three';
 
-const prefersReducedMotion = window.matchMedia(
-  '(prefers-reduced-motion: reduce)'
-);
+const DEFAULTS = Object.freeze({
+  BackgroundScene: 'core-network-mesh',
+  AnimationIntensity: 'NORMAL',
+  BackgroundOpacity: 33,
+  MouseParallax: true,
+  DataFlow: true,
+  ReduceMotionMobile: true
+});
 
-const isSmallScreen = () =>
-  window.matchMedia('(max-width: 767px)').matches;
+const intensityScale = {
+  LOW: 0.58,
+  NORMAL: 1,
+  HIGH: 1.55
+};
 
-const clamp = (value, min, max) =>
-  Math.min(max, Math.max(min, value));
+const prefersReducedMotion =
+  window.matchMedia(
+    '(prefers-reduced-motion: reduce)'
+  );
+
+const isMobile = () =>
+  window.matchMedia(
+    '(max-width: 767px)'
+  ).matches;
+
 
 function supportsWebGL() {
   try {
-    const canvas = document.createElement('canvas');
+    const canvas =
+      document.createElement('canvas');
+
     return !!(
       canvas.getContext('webgl2') ||
       canvas.getContext('webgl')
@@ -22,59 +40,124 @@ function supportsWebGL() {
   }
 }
 
-class CoreScene {
-  constructor(container, mode = 'app') {
+
+function normalizePrefs(input) {
+  const p =
+    Object.assign(
+      {},
+      DEFAULTS,
+      input || {}
+    );
+
+  p.BackgroundOpacity =
+    Math.max(
+      0,
+      Math.min(
+        60,
+        Number(p.BackgroundOpacity) || 0
+      )
+    );
+
+  p.AnimationIntensity =
+    intensityScale[
+      String(
+        p.AnimationIntensity
+      ).toUpperCase()
+    ]
+      ? String(
+          p.AnimationIntensity
+        ).toUpperCase()
+      : 'NORMAL';
+
+  p.MouseParallax =
+    p.MouseParallax === true ||
+    String(p.MouseParallax) === 'true';
+
+  p.DataFlow =
+    p.DataFlow === true ||
+    String(p.DataFlow) === 'true';
+
+  p.ReduceMotionMobile =
+    p.ReduceMotionMobile === true ||
+    String(p.ReduceMotionMobile) === 'true';
+
+  return p;
+}
+
+
+class AppSceneEngine {
+  constructor(container) {
     this.container = container;
-    this.mode = mode;
-    this.running = false;
-    this.destroyed = false;
-    this.activity = 1;
+    this.scene = null;
+    this.camera = null;
+    this.renderer = null;
+    this.root = null;
+    this.dynamic = [];
+    this.packetSystems = [];
     this.pointer = { x: 0, y: 0 };
-    this.clock = new THREE.Clock();
-    this.packetTracks = [];
-    this.packetPhases = [];
-    this.packetSpeeds = [];
+    this.page = 'dashboard';
+    this.prefs =
+      normalizePrefs(
+        window.MLNAppearancePreferences
+      );
+
+    this.clock =
+      new THREE.Clock();
 
     this.init();
   }
 
   init() {
-    if (!this.container || !supportsWebGL()) {
-      this.container?.classList.add('three-core-fallback');
+    if (
+      !this.container ||
+      !supportsWebGL()
+    ) {
+      this.container?.classList.add(
+        'three-core-fallback'
+      );
+
       return;
     }
 
-    this.scene = new THREE.Scene();
+    this.scene =
+      new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(
-      this.mode === 'login' ? 42 : 48,
-      1,
-      0.1,
-      100
-    );
+    this.camera =
+      new THREE.PerspectiveCamera(
+        48,
+        1,
+        0.1,
+        120
+      );
 
     this.camera.position.set(
       0,
       0,
-      this.mode === 'login' ? 7.4 : 9.2
+      9.4
     );
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: !isSmallScreen(),
-      alpha: true,
-      powerPreference: 'high-performance'
-    });
+    this.renderer =
+      new THREE.WebGLRenderer({
+        antialias: !isMobile(),
+        alpha: true,
+        powerPreference:
+          'high-performance'
+      });
 
-    this.renderer.setClearColor(0x000000, 0);
-    this.renderer.setPixelRatio(
-      Math.min(
-        window.devicePixelRatio || 1,
-        isSmallScreen() ? 1 : 1.5
-      )
+    this.renderer.setClearColor(
+      0x000000,
+      0
     );
 
     this.renderer.outputColorSpace =
       THREE.SRGBColorSpace;
+
+    this.renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        isMobile() ? 1 : 1.5
+      )
+    );
 
     this.renderer.domElement.className =
       'three-core-canvas';
@@ -83,48 +166,216 @@ class CoreScene {
       this.renderer.domElement
     );
 
-    this.root = new THREE.Group();
-    this.scene.add(this.root);
-
-    if (this.mode === 'login') {
-      this.buildLoginCore();
-    } else {
-      this.buildAppCore();
-    }
-
     this.resizeObserver =
-      new ResizeObserver(() => this.resize());
+      new ResizeObserver(
+        () => this.resize()
+      );
 
-    this.resizeObserver.observe(this.container);
-
-    this.onPointerMove =
-      event => {
-        const rect =
-          this.container.getBoundingClientRect();
-
-        if (!rect.width || !rect.height) return;
-
-        this.pointer.x =
-          ((event.clientX - rect.left) / rect.width) * 2 - 1;
-
-        this.pointer.y =
-          -(
-            ((event.clientY - rect.top) / rect.height) * 2 - 1
-          );
-      };
+    this.resizeObserver.observe(
+      this.container
+    );
 
     window.addEventListener(
       'pointermove',
-      this.onPointerMove,
-      { passive: true }
+      event => {
+        if (
+          !this.prefs.MouseParallax
+        ) {
+          return;
+        }
+
+        const rect =
+          this.container
+            .getBoundingClientRect();
+
+        if (
+          !rect.width ||
+          !rect.height
+        ) {
+          return;
+        }
+
+        this.pointer.x =
+          (
+            (
+              event.clientX -
+              rect.left
+            ) /
+            rect.width
+          ) * 2 - 1;
+
+        this.pointer.y =
+          -(
+            (
+              (
+                event.clientY -
+                rect.top
+              ) /
+              rect.height
+            ) * 2 - 1
+          );
+      },
+      {
+        passive:true
+      }
     );
 
     this.resize();
-    this.running = true;
+    this.rebuild();
     this.animate();
   }
 
-  makeGlowPointMaterial(
+  setPage(page) {
+    this.page =
+      String(page || '');
+
+    this.applyOpacity();
+  }
+
+  setPreferences(input) {
+    this.prefs =
+      normalizePrefs(input);
+
+    this.rebuild();
+    this.applyOpacity();
+  }
+
+  applyOpacity() {
+    if (!this.container) return;
+
+    if (
+      this.prefs.BackgroundScene ===
+      'off'
+    ) {
+      this.container.style.opacity =
+        '0';
+
+      return;
+    }
+
+    let opacity =
+      this.prefs.BackgroundOpacity /
+      100;
+
+    if (
+      this.page !== 'dashboard'
+    ) {
+      opacity *= 0.43;
+    }
+
+    if (
+      isMobile() &&
+      this.prefs.ReduceMotionMobile
+    ) {
+      opacity *= 0.42;
+    }
+
+    this.container.style.opacity =
+      String(
+        Math.max(
+          0,
+          Math.min(
+            0.6,
+            opacity
+          )
+        )
+      );
+  }
+
+  clearScene() {
+    this.dynamic = [];
+    this.packetSystems = [];
+
+    if (this.root) {
+      this.scene.remove(
+        this.root
+      );
+
+      this.root.traverse(
+        object => {
+          if (object.geometry) {
+            object.geometry.dispose();
+          }
+
+          if (object.material) {
+            if (
+              Array.isArray(
+                object.material
+              )
+            ) {
+              object.material.forEach(
+                m => m.dispose()
+              );
+            } else {
+              object.material.dispose();
+            }
+          }
+        }
+      );
+    }
+
+    this.root =
+      new THREE.Group();
+
+    this.scene.add(
+      this.root
+    );
+  }
+
+  rebuild() {
+    if (!this.scene) return;
+
+    this.clearScene();
+
+    const name =
+      this.prefs.BackgroundScene;
+
+    const builders = {
+      'network-globe':
+        () => this.buildGlobe(),
+      'core-network-mesh':
+        () => this.buildMesh(),
+      'cyber-grid':
+        () => this.buildCyberGrid(),
+      'data-stream':
+        () => this.buildDataStream(),
+      'network-topology':
+        () => this.buildTopology(false),
+      'data-center-core':
+        () => this.buildServerMatrix(true),
+      'pop-network-map':
+        () => this.buildPopMap(),
+      'fiber-backbone':
+        () => this.buildFiber(),
+      'incident-alert':
+        () => this.buildTopology(true),
+      'digital-city-nodes':
+        () => this.buildCity(),
+      'particle-field':
+        () => this.buildParticleField(),
+      'hex-tech-grid':
+        () => this.buildHexGrid(),
+      'radar-core':
+        () => this.buildRadar(),
+      'orbital-core':
+        () => this.buildOrbital(),
+      'server-matrix':
+        () => this.buildServerMatrix(false),
+      'off':
+        () => {}
+    };
+
+    (
+      builders[name] ||
+      builders[
+        'core-network-mesh'
+      ]
+    )();
+
+    this.applyOpacity();
+  }
+
+  pointMaterial(
     color,
     size,
     opacity = 1
@@ -132,36 +383,47 @@ class CoreScene {
     return new THREE.PointsMaterial({
       color,
       size,
-      transparent: true,
+      transparent:true,
       opacity,
-      sizeAttenuation: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending
+      sizeAttenuation:true,
+      depthWrite:false,
+      blending:
+        THREE.AdditiveBlending
     });
   }
 
-  fibonacciSphere(count, radius) {
+  lineMaterial(
+    color,
+    opacity = 0.16
+  ) {
+    return new THREE.LineBasicMaterial({
+      color,
+      transparent:true,
+      opacity,
+      depthWrite:false,
+      blending:
+        THREE.AdditiveBlending
+    });
+  }
+
+  randomPoints(
+    count,
+    sx,
+    sy,
+    sz
+  ) {
     const points = [];
-    const goldenAngle =
-      Math.PI * (3 - Math.sqrt(5));
 
-    for (let i = 0; i < count; i++) {
-      const y =
-        1 - (i / Math.max(1, count - 1)) * 2;
-
-      const ringRadius =
-        Math.sqrt(
-          Math.max(0, 1 - y * y)
-        );
-
-      const theta =
-        goldenAngle * i;
-
+    for (
+      let i = 0;
+      i < count;
+      i++
+    ) {
       points.push(
         new THREE.Vector3(
-          Math.cos(theta) * ringRadius * radius,
-          y * radius,
-          Math.sin(theta) * ringRadius * radius
+          (Math.random() - 0.5) * sx,
+          (Math.random() - 0.5) * sy,
+          (Math.random() - 0.5) * sz
         )
       );
     }
@@ -169,86 +431,126 @@ class CoreScene {
     return points;
   }
 
-  buildConnections(points, maxDistance, maxNeighbors = 3) {
+  connect(
+    points,
+    maxDistance,
+    maxNeighbors = 2,
+    color = 0x268dce,
+    opacity = 0.12
+  ) {
+    const positions = [];
     const pairs = [];
-    const linePositions = [];
 
-    for (let i = 0; i < points.length; i++) {
-      const distances = [];
+    for (
+      let i = 0;
+      i < points.length;
+      i++
+    ) {
+      const neighbors = [];
 
-      for (let j = i + 1; j < points.length; j++) {
+      for (
+        let j = i + 1;
+        j < points.length;
+        j++
+      ) {
         const distance =
-          points[i].distanceTo(points[j]);
+          points[i]
+            .distanceTo(
+              points[j]
+            );
 
-        if (distance <= maxDistance) {
-          distances.push({
+        if (
+          distance <= maxDistance
+        ) {
+          neighbors.push({
             j,
             distance
           });
         }
       }
 
-      distances
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, maxNeighbors)
-        .forEach(({ j }) => {
-          pairs.push([points[i], points[j]]);
+      neighbors
+        .sort(
+          (a, b) =>
+            a.distance -
+            b.distance
+        )
+        .slice(
+          0,
+          maxNeighbors
+        )
+        .forEach(
+          ({ j }) => {
+            positions.push(
+              points[i].x,
+              points[i].y,
+              points[i].z,
+              points[j].x,
+              points[j].y,
+              points[j].z
+            );
 
-          linePositions.push(
-            points[i].x,
-            points[i].y,
-            points[i].z,
-            points[j].x,
-            points[j].y,
-            points[j].z
-          );
-        });
+            pairs.push([
+              points[i],
+              points[j]
+            ]);
+          }
+        );
     }
 
-    return {
-      pairs,
-      linePositions
-    };
-  }
-
-  buildPacketCloud(
-    pairs,
-    count,
-    color,
-    size
-  ) {
-    if (!pairs.length) return;
-
-    const packetCount =
-      Math.min(count, pairs.length);
-
-    const positions =
-      new Float32Array(packetCount * 3);
-
-    this.packetTracks = [];
-
-    for (let i = 0; i < packetCount; i++) {
-      const pair =
-        pairs[
-          Math.floor(
-            (i / packetCount) * pairs.length
-          )
-        ];
-
-      this.packetTracks.push(pair);
-      this.packetPhases.push(
-        (i / packetCount + Math.random() * 0.15) % 1
-      );
-
-      this.packetSpeeds.push(
-        0.08 + Math.random() * 0.13
-      );
-    }
-
-    this.packetGeometry =
+    const geometry =
       new THREE.BufferGeometry();
 
-    this.packetGeometry.setAttribute(
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        positions,
+        3
+      )
+    );
+
+    const lines =
+      new THREE.LineSegments(
+        geometry,
+        this.lineMaterial(
+          color,
+          opacity
+        )
+      );
+
+    this.root.add(lines);
+
+    return pairs;
+  }
+
+  addPackets(
+    pairs,
+    count = 14,
+    color = 0x62f1ff,
+    size = 0.05
+  ) {
+    if (
+      !pairs.length ||
+      !this.prefs.DataFlow
+    ) {
+      return;
+    }
+
+    const n =
+      Math.min(
+        count,
+        pairs.length
+      );
+
+    const geometry =
+      new THREE.BufferGeometry();
+
+    const positions =
+      new Float32Array(
+        n * 3
+      );
+
+    geometry.setAttribute(
       'position',
       new THREE.BufferAttribute(
         positions,
@@ -256,412 +558,1141 @@ class CoreScene {
       )
     );
 
-    this.packetMaterial =
-      this.makeGlowPointMaterial(
-        color,
-        size,
-        0.95
-      );
-
-    this.packetPoints =
+    const points =
       new THREE.Points(
-        this.packetGeometry,
-        this.packetMaterial
+        geometry,
+        this.pointMaterial(
+          color,
+          size,
+          0.95
+        )
       );
 
-    this.root.add(
-      this.packetPoints
-    );
+    const system = {
+      geometry,
+      points,
+      tracks:[],
+      phases:[],
+      speeds:[]
+    };
+
+    for (
+      let i = 0;
+      i < n;
+      i++
+    ) {
+      system.tracks.push(
+        pairs[
+          Math.floor(
+            (
+              i /
+              n
+            ) *
+            pairs.length
+          )
+        ]
+      );
+
+      system.phases.push(
+        (
+          i / n +
+          Math.random() * 0.15
+        ) % 1
+      );
+
+      system.speeds.push(
+        0.07 +
+        Math.random() * 0.13
+      );
+    }
+
+    this.root.add(points);
+    this.packetSystems.push(system);
   }
 
-  buildLoginCore() {
-    const mobile =
-      isSmallScreen();
-
-    const nodeCount =
-      mobile ? 42 : 86;
-
-    const radius =
-      mobile ? 1.75 : 2.15;
+  buildMesh() {
+    const count =
+      isMobile() ? 34 : 78;
 
     const points =
-      this.fibonacciSphere(
-        nodeCount,
-        radius
+      this.randomPoints(
+        count,
+        13,
+        7,
+        2.4
       );
 
-    const nodeGeometry =
+    const geometry =
       new THREE.BufferGeometry()
         .setFromPoints(points);
 
-    const nodeMaterial =
-      this.makeGlowPointMaterial(
-        0x38e8ff,
-        mobile ? 0.045 : 0.052,
-        0.9
-      );
-
-    this.nodePoints =
+    this.root.add(
       new THREE.Points(
-        nodeGeometry,
-        nodeMaterial
-      );
-
-    this.root.add(
-      this.nodePoints
-    );
-
-    const {
-      pairs,
-      linePositions
-    } =
-      this.buildConnections(
-        points,
-        mobile ? 0.92 : 0.78,
-        2
-      );
-
-    const lineGeometry =
-      new THREE.BufferGeometry();
-
-    lineGeometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(
-        linePositions,
-        3
-      )
-    );
-
-    const lineMaterial =
-      new THREE.LineBasicMaterial({
-        color: 0x3e8fff,
-        transparent: true,
-        opacity: 0.2,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
-      });
-
-    this.networkLines =
-      new THREE.LineSegments(
-        lineGeometry,
-        lineMaterial
-      );
-
-    this.root.add(
-      this.networkLines
-    );
-
-    const shellGeometry =
-      new THREE.IcosahedronGeometry(
-        radius * 1.02,
-        2
-      );
-
-    const shellMaterial =
-      new THREE.MeshBasicMaterial({
-        color: 0x6c63ff,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.055,
-        depthWrite: false
-      });
-
-    this.shell =
-      new THREE.Mesh(
-        shellGeometry,
-        shellMaterial
-      );
-
-    this.root.add(
-      this.shell
-    );
-
-    const ringMaterial =
-      new THREE.MeshBasicMaterial({
-        color: 0x2ee7ff,
-        transparent: true,
-        opacity: 0.13,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
-      });
-
-    this.ringA =
-      new THREE.Mesh(
-        new THREE.TorusGeometry(
-          radius * 1.28,
-          0.008,
-          5,
-          128
-        ),
-        ringMaterial
-      );
-
-    this.ringA.rotation.x =
-      Math.PI / 2.7;
-
-    this.ringA.rotation.y =
-      Math.PI / 4.5;
-
-    this.root.add(
-      this.ringA
-    );
-
-    this.ringB =
-      this.ringA.clone();
-
-    this.ringB.rotation.x =
-      Math.PI / 1.8;
-
-    this.ringB.rotation.y =
-      -Math.PI / 5;
-
-    this.root.add(
-      this.ringB
-    );
-
-    this.root.position.set(
-      mobile ? 0.25 : 0.85,
-      mobile ? -0.4 : -0.45,
-      0
-    );
-
-    this.buildPacketCloud(
-      pairs,
-      mobile ? 8 : 20,
-      0xb15cff,
-      mobile ? 0.052 : 0.06
-    );
-
-    const starCount =
-      mobile ? 34 : 80;
-
-    const starPositions =
-      new Float32Array(
-        starCount * 3
-      );
-
-    for (let i = 0; i < starCount; i++) {
-      const spread = 6;
-
-      starPositions[i * 3] =
-        (Math.random() - 0.5) *
-        spread;
-
-      starPositions[i * 3 + 1] =
-        (Math.random() - 0.5) *
-        spread;
-
-      starPositions[i * 3 + 2] =
-        -2 - Math.random() * 4;
-    }
-
-    const starGeometry =
-      new THREE.BufferGeometry();
-
-    starGeometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(
-        starPositions,
-        3
-      )
-    );
-
-    this.stars =
-      new THREE.Points(
-        starGeometry,
-        this.makeGlowPointMaterial(
-          0x507cff,
-          mobile ? 0.025 : 0.032,
-          0.45
+        geometry,
+        this.pointMaterial(
+          0x20e1ed,
+          0.045,
+          0.78
         )
+      )
+    );
+
+    const pairs =
+      this.connect(
+        points,
+        1.75,
+        2,
+        0x268dce,
+        0.13
       );
 
-    this.scene.add(
-      this.stars
+    this.addPackets(
+      pairs,
+      isMobile() ? 7 : 20
     );
   }
 
-  buildAppCore() {
-    const mobile =
-      isSmallScreen();
-
-    const nodeCount =
-      mobile ? 34 : 72;
-
+  fibonacciSphere(
+    count,
+    radius
+  ) {
     const points = [];
 
-    for (let i = 0; i < nodeCount; i++) {
+    const goldenAngle =
+      Math.PI *
+      (
+        3 -
+        Math.sqrt(5)
+      );
+
+    for (
+      let i = 0;
+      i < count;
+      i++
+    ) {
+      const y =
+        1 -
+        (
+          i /
+          Math.max(
+            1,
+            count - 1
+          )
+        ) * 2;
+
+      const r =
+        Math.sqrt(
+          Math.max(
+            0,
+            1 - y * y
+          )
+        );
+
+      const theta =
+        goldenAngle * i;
+
       points.push(
         new THREE.Vector3(
-          (Math.random() - 0.5) * 13,
-          (Math.random() - 0.5) * 7,
-          (Math.random() - 0.5) * 2.2
+          Math.cos(theta) *
+          r *
+          radius,
+          y * radius,
+          Math.sin(theta) *
+          r *
+          radius
         )
       );
     }
 
-    const nodeGeometry =
-      new THREE.BufferGeometry()
-        .setFromPoints(points);
+    return points;
+  }
 
-    const colors =
-      new Float32Array(
-        nodeCount * 3
-      );
-
-    const cyan =
-      new THREE.Color(0x16e0ee);
-
-    const violet =
-      new THREE.Color(0x7568ff);
-
-    for (let i = 0; i < nodeCount; i++) {
-      const c =
-        Math.random() > 0.72
-          ? violet
-          : cyan;
-
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
-    }
-
-    nodeGeometry.setAttribute(
-      'color',
-      new THREE.BufferAttribute(
-        colors,
-        3
-      )
-    );
-
-    const nodeMaterial =
-      new THREE.PointsMaterial({
-        size: mobile ? 0.032 : 0.045,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.72,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
-      });
-
-    this.nodePoints =
-      new THREE.Points(
-        nodeGeometry,
-        nodeMaterial
+  buildGlobe() {
+    const points =
+      this.fibonacciSphere(
+        isMobile() ? 42 : 88,
+        2.15
       );
 
     this.root.add(
-      this.nodePoints
-    );
-
-    const {
-      pairs,
-      linePositions
-    } =
-      this.buildConnections(
-        points,
-        mobile ? 2.15 : 1.75,
-        2
-      );
-
-    const lineGeometry =
-      new THREE.BufferGeometry();
-
-    lineGeometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(
-        linePositions,
-        3
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        this.pointMaterial(
+          0x39e7ff,
+          0.052,
+          0.88
+        )
       )
     );
 
-    this.networkLines =
-      new THREE.LineSegments(
-        lineGeometry,
-        new THREE.LineBasicMaterial({
-          color: 0x268dce,
-          transparent: true,
-          opacity: 0.11,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending
+    const pairs =
+      this.connect(
+        points,
+        0.78,
+        2,
+        0x4b85ff,
+        0.19
+      );
+
+    const shell =
+      new THREE.Mesh(
+        new THREE.IcosahedronGeometry(
+          2.18,
+          2
+        ),
+        new THREE.MeshBasicMaterial({
+          color:0x6f63ff,
+          wireframe:true,
+          transparent:true,
+          opacity:0.055
         })
       );
 
-    this.root.add(
-      this.networkLines
-    );
-
-    this.buildPacketCloud(
+    this.root.add(shell);
+    this.addPackets(
       pairs,
-      mobile ? 7 : 18,
-      0x62f1ff,
-      mobile ? 0.045 : 0.055
+      20,
+      0xc36cff,
+      0.058
     );
 
-    const ringGroup =
+    this.root.position.x =
+      2.4;
+
+    this.dynamic.push(
+      {
+        object:this.root,
+        type:'rotateY',
+        speed:0.045
+      }
+    );
+  }
+
+  buildCyberGrid() {
+    const grid =
+      new THREE.GridHelper(
+        16,
+        32,
+        0x14d9e7,
+        0x17405d
+      );
+
+    grid.rotation.x =
+      Math.PI / 2.35;
+
+    grid.position.y =
+      -1.6;
+
+    grid.material.transparent =
+      true;
+
+    grid.material.opacity =
+      0.22;
+
+    this.root.add(grid);
+
+    const points =
+      this.randomPoints(
+        42,
+        12,
+        4,
+        0.5
+      );
+
+    this.root.add(
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        this.pointMaterial(
+          0x57eaff,
+          0.055,
+          0.7
+        )
+      )
+    );
+  }
+
+  buildDataStream() {
+    const points = [];
+    const tracks = [];
+
+    for (
+      let lane = 0;
+      lane < 16;
+      lane++
+    ) {
+      const x =
+        -6 +
+        lane * 0.8;
+
+      const a =
+        new THREE.Vector3(
+          x,
+          -3.7,
+          -1
+        );
+
+      const b =
+        new THREE.Vector3(
+          x + 2.2,
+          3.7,
+          0.5
+        );
+
+      tracks.push([a,b]);
+      points.push(a,b);
+    }
+
+    this.connect(
+      points,
+      0.01,
+      0,
+      0x1b83bb,
+      0
+    );
+
+    const positions = [];
+
+    tracks.forEach(
+      ([a,b]) => {
+        positions.push(
+          a.x,a.y,a.z,
+          b.x,b.y,b.z
+        );
+      }
+    );
+
+    const g =
+      new THREE.BufferGeometry();
+
+    g.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        positions,
+        3
+      )
+    );
+
+    this.root.add(
+      new THREE.LineSegments(
+        g,
+        this.lineMaterial(
+          0x147ca9,
+          0.17
+        )
+      )
+    );
+
+    this.addPackets(
+      tracks,
+      16,
+      0x4ff6ff,
+      0.07
+    );
+  }
+
+  buildTopology(incident) {
+    const levels = [
+      [
+        new THREE.Vector3(
+          0,2.7,0
+        )
+      ],
+      [
+        new THREE.Vector3(
+          -3,1,0
+        ),
+        new THREE.Vector3(
+          0,1,0
+        ),
+        new THREE.Vector3(
+          3,1,0
+        )
+      ],
+      [
+        new THREE.Vector3(
+          -4.5,-1.5,0
+        ),
+        new THREE.Vector3(
+          -1.5,-1.5,0
+        ),
+        new THREE.Vector3(
+          1.5,-1.5,0
+        ),
+        new THREE.Vector3(
+          4.5,-1.5,0
+        )
+      ]
+    ];
+
+    const points =
+      levels.flat();
+
+    const pairs = [];
+
+    levels[1].forEach(
+      p => pairs.push([
+        levels[0][0],
+        p
+      ])
+    );
+
+    levels[2].forEach(
+      (p,i) => {
+        pairs.push([
+          levels[1][
+            Math.min(
+              2,
+              Math.floor(
+                i * 0.75
+              )
+            )
+          ],
+          p
+        ]);
+      }
+    );
+
+    const linePositions = [];
+
+    pairs.forEach(
+      ([a,b]) =>
+        linePositions.push(
+          a.x,a.y,a.z,
+          b.x,b.y,b.z
+        )
+    );
+
+    const g =
+      new THREE.BufferGeometry();
+
+    g.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        linePositions,
+        3
+      )
+    );
+
+    this.root.add(
+      new THREE.LineSegments(
+        g,
+        this.lineMaterial(
+          incident
+            ? 0xff7048
+            : 0x339ee8,
+          incident
+            ? 0.22
+            : 0.18
+        )
+      )
+    );
+
+    const normal =
+      this.pointMaterial(
+        0x35e5ef,
+        0.12,
+        0.92
+      );
+
+    this.root.add(
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        normal
+      )
+    );
+
+    if (incident) {
+      const alert =
+        new THREE.Mesh(
+          new THREE.SphereGeometry(
+            0.14,
+            16,
+            16
+          ),
+          new THREE.MeshBasicMaterial({
+            color:0xff385f,
+            transparent:true,
+            opacity:0.85
+          })
+        );
+
+      alert.position.copy(
+        levels[2][2]
+      );
+
+      this.root.add(alert);
+
+      this.dynamic.push({
+        object:alert,
+        type:'pulse',
+        speed:2.2
+      });
+    }
+
+    this.addPackets(
+      pairs,
+      10,
+      incident
+        ? 0xff9a3d
+        : 0x5eefff,
+      0.06
+    );
+  }
+
+  buildServerMatrix(coreOnly) {
+    const group =
       new THREE.Group();
 
-    const ringMaterial =
-      new THREE.MeshBasicMaterial({
-        color: 0x6f63ff,
-        transparent: true,
-        opacity: 0.045,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending
-      });
+    const cols =
+      coreOnly ? 5 : 8;
 
-    for (let i = 0; i < 3; i++) {
+    const rows =
+      coreOnly ? 2 : 3;
+
+    for (
+      let r = 0;
+      r < rows;
+      r++
+    ) {
+      for (
+        let c = 0;
+        c < cols;
+        c++
+      ) {
+        const box =
+          new THREE.Mesh(
+            new THREE.BoxGeometry(
+              0.62,
+              1.4,
+              0.55
+            ),
+            new THREE.MeshBasicMaterial({
+              color:
+                c % 3 === 0
+                  ? 0x705cff
+                  : 0x1ac9df,
+              wireframe:true,
+              transparent:true,
+              opacity:0.19
+            })
+          );
+
+        box.position.set(
+          (c - (cols-1)/2) * 1.05,
+          (r - (rows-1)/2) * 1.8,
+          (Math.random()-0.5)*0.8
+        );
+
+        group.add(box);
+      }
+    }
+
+    this.root.add(group);
+
+    this.dynamic.push({
+      object:group,
+      type:'float',
+      speed:0.3
+    });
+  }
+
+  buildPopMap() {
+    const points = [
+      [-4,1.8],
+      [-1.8,2.5],
+      [0.2,1.1],
+      [3.7,2],
+      [-3,-1],
+      [-0.6,-1.9],
+      [2.1,-1.1],
+      [4.5,-2]
+    ].map(
+      ([x,y]) =>
+        new THREE.Vector3(
+          x,y,0
+        )
+    );
+
+    this.root.add(
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        this.pointMaterial(
+          0x36e5ef,
+          0.11,
+          0.92
+        )
+      )
+    );
+
+    const pairs = [
+      [points[0],points[1]],
+      [points[1],points[2]],
+      [points[2],points[3]],
+      [points[0],points[4]],
+      [points[4],points[5]],
+      [points[5],points[6]],
+      [points[6],points[7]],
+      [points[2],points[6]]
+    ];
+
+    const pos = [];
+
+    pairs.forEach(
+      ([a,b]) =>
+        pos.push(
+          a.x,a.y,a.z,
+          b.x,b.y,b.z
+        )
+    );
+
+    const g =
+      new THREE.BufferGeometry();
+
+    g.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(
+        pos,
+        3
+      )
+    );
+
+    this.root.add(
+      new THREE.LineSegments(
+        g,
+        this.lineMaterial(
+          0x447aff,
+          0.2
+        )
+      )
+    );
+
+    this.addPackets(
+      pairs,
+      8
+    );
+  }
+
+  buildFiber() {
+    const curves = [];
+    const allPairs = [];
+
+    for (
+      let i = 0;
+      i < 4;
+      i++
+    ) {
+      const curve =
+        new THREE.CatmullRomCurve3([
+          new THREE.Vector3(
+            -6,
+            -2.5 + i * 1.55,
+            -0.4
+          ),
+          new THREE.Vector3(
+            -2.5,
+            -1.4 + i * 1.25,
+            0.4
+          ),
+          new THREE.Vector3(
+            1.8,
+            -2.2 + i * 1.55,
+            -0.2
+          ),
+          new THREE.Vector3(
+            6,
+            -1.1 + i * 1.25,
+            0.2
+          )
+        ]);
+
+      curves.push(curve);
+
+      const samples =
+        curve.getPoints(60);
+
+      const g =
+        new THREE.BufferGeometry()
+          .setFromPoints(samples);
+
+      this.root.add(
+        new THREE.Line(
+          g,
+          this.lineMaterial(
+            i % 2
+              ? 0x735cff
+              : 0x18d8e8,
+            0.26
+          )
+        )
+      );
+
+      for (
+        let j = 0;
+        j < samples.length - 1;
+        j += 12
+      ) {
+        allPairs.push([
+          samples[j],
+          samples[
+            Math.min(
+              samples.length - 1,
+              j + 12
+            )
+          ]
+        ]);
+      }
+    }
+
+    this.addPackets(
+      allPairs,
+      14,
+      0xffffff,
+      0.055
+    );
+  }
+
+  buildCity() {
+    const group =
+      new THREE.Group();
+
+    const points = [];
+
+    for (
+      let i = 0;
+      i < 28;
+      i++
+    ) {
+      const x =
+        (Math.random()-0.5)*11;
+
+      const y =
+        (Math.random()-0.5)*5.5;
+
+      const h =
+        0.18 +
+        Math.random()*0.7;
+
+      const box =
+        new THREE.Mesh(
+          new THREE.BoxGeometry(
+            0.25,
+            0.25,
+            h
+          ),
+          new THREE.MeshBasicMaterial({
+            color:
+              i % 4 === 0
+                ? 0x7866ff
+                : 0x22dce9,
+            wireframe:true,
+            transparent:true,
+            opacity:0.25
+          })
+        );
+
+      box.position.set(
+        x,y,-0.3
+      );
+
+      group.add(box);
+
+      points.push(
+        new THREE.Vector3(
+          x,y,0
+        )
+      );
+    }
+
+    this.root.add(group);
+
+    const pairs =
+      this.connect(
+        points,
+        2.3,
+        1,
+        0x2d8cc5,
+        0.11
+      );
+
+    this.addPackets(
+      pairs,
+      10
+    );
+  }
+
+  buildParticleField() {
+    const points =
+      this.randomPoints(
+        isMobile() ? 70 : 180,
+        14,
+        8,
+        4
+      );
+
+    const cloud =
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        this.pointMaterial(
+          0x43e7ff,
+          0.04,
+          0.64
+        )
+      );
+
+    this.root.add(cloud);
+
+    this.dynamic.push({
+      object:cloud,
+      type:'rotateZ',
+      speed:0.012
+    });
+  }
+
+  buildHexGrid() {
+    const group =
+      new THREE.Group();
+
+    const radius =
+      0.46;
+
+    for (
+      let row = -4;
+      row <= 4;
+      row++
+    ) {
+      for (
+        let col = -7;
+        col <= 7;
+        col++
+      ) {
+        if (
+          Math.random() < 0.2
+        ) {
+          continue;
+        }
+
+        const geometry =
+          new THREE.RingGeometry(
+            radius * 0.83,
+            radius,
+            6
+          );
+
+        const mesh =
+          new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({
+              color:
+                (row + col) % 4 === 0
+                  ? 0x735cff
+                  : 0x1ecada,
+              transparent:true,
+              opacity:
+                0.06 +
+                Math.random()*0.08,
+              side:THREE.DoubleSide
+            })
+          );
+
+        mesh.position.set(
+          col * radius * 1.7 +
+          (row % 2
+            ? radius * 0.85
+            : 0),
+          row * radius * 1.48,
+          -0.6
+        );
+
+        group.add(mesh);
+      }
+    }
+
+    this.root.add(group);
+  }
+
+  buildRadar() {
+    const group =
+      new THREE.Group();
+
+    for (
+      let i = 1;
+      i <= 5;
+      i++
+    ) {
+      const ring =
+        new THREE.Mesh(
+          new THREE.RingGeometry(
+            i * 0.72 - 0.012,
+            i * 0.72,
+            96
+          ),
+          new THREE.MeshBasicMaterial({
+            color:0x19d8e7,
+            transparent:true,
+            opacity:0.12,
+            side:THREE.DoubleSide
+          })
+        );
+
+      group.add(ring);
+    }
+
+    const sweep =
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(
+          3.6,
+          0.035
+        ),
+        new THREE.MeshBasicMaterial({
+          color:0x5ff8ff,
+          transparent:true,
+          opacity:0.45
+        })
+      );
+
+    sweep.position.x =
+      1.8;
+
+    group.add(sweep);
+
+    const targets = [
+      [-2.1,1.1],
+      [1.5,2.3],
+      [2.8,-1.3],
+      [-0.8,-2.4]
+    ];
+
+    targets.forEach(
+      ([x,y]) => {
+        const target =
+          new THREE.Mesh(
+            new THREE.CircleGeometry(
+              0.07,
+              18
+            ),
+            new THREE.MeshBasicMaterial({
+              color:0x83fbff,
+              transparent:true,
+              opacity:0.9
+            })
+          );
+
+        target.position.set(
+          x,y,0.05
+        );
+
+        group.add(target);
+      }
+    );
+
+    this.root.add(group);
+
+    this.dynamic.push({
+      object:sweep,
+      type:'radar',
+      speed:0.55
+    });
+  }
+
+  buildOrbital() {
+    const core =
+      new THREE.Mesh(
+        new THREE.IcosahedronGeometry(
+          0.8,
+          2
+        ),
+        new THREE.MeshBasicMaterial({
+          color:0x675cff,
+          wireframe:true,
+          transparent:true,
+          opacity:0.28
+        })
+      );
+
+    this.root.add(core);
+
+    for (
+      let i = 0;
+      i < 4;
+      i++
+    ) {
       const ring =
         new THREE.Mesh(
           new THREE.TorusGeometry(
-            1.5 + i * 0.7,
-            0.006,
+            1.6 + i * 0.65,
+            0.012,
             4,
-            96
+            128
           ),
-          ringMaterial
+          new THREE.MeshBasicMaterial({
+            color:
+              i % 2
+                ? 0x735cff
+                : 0x20dce9,
+            transparent:true,
+            opacity:0.18
+          })
         );
 
       ring.rotation.x =
-        Math.PI / 2.1;
+        Math.PI /
+        (2.2 + i * 0.15);
 
-      ring.rotation.z =
-        i * 0.33;
+      ring.rotation.y =
+        i * 0.35;
 
-      ringGroup.add(ring);
+      this.root.add(ring);
+
+      this.dynamic.push({
+        object:ring,
+        type:
+          i % 2
+            ? 'rotateZNeg'
+            : 'rotateZ',
+        speed:
+          0.06 +
+          i * 0.012
+      });
     }
 
-    ringGroup.position.set(
-      3.7,
-      2.2,
-      -1.2
-    );
-
-    this.ringGroup =
-      ringGroup;
-
-    this.root.add(
-      ringGroup
-    );
-
-    this.root.rotation.x =
-      -0.08;
+    this.dynamic.push({
+      object:core,
+      type:'rotateY',
+      speed:0.08
+    });
   }
 
-  setActivity(value) {
-    this.activity =
-      clamp(
-        Number(value) || 1,
-        0.55,
-        2.2
-      );
+  updatePackets(delta) {
+    const scale =
+      intensityScale[
+        this.prefs.AnimationIntensity
+      ] || 1;
+
+    this.packetSystems.forEach(
+      system => {
+        const positions =
+          system.geometry
+            .attributes.position.array;
+
+        for (
+          let i = 0;
+          i < system.tracks.length;
+          i++
+        ) {
+          system.phases[i] =
+            (
+              system.phases[i] +
+              delta *
+              system.speeds[i] *
+              scale
+            ) % 1;
+
+          const [
+            a,b
+          ] =
+            system.tracks[i];
+
+          const t =
+            system.phases[i];
+
+          const idx =
+            i * 3;
+
+          positions[idx] =
+            THREE.MathUtils.lerp(
+              a.x,b.x,t
+            );
+
+          positions[idx+1] =
+            THREE.MathUtils.lerp(
+              a.y,b.y,t
+            );
+
+          positions[idx+2] =
+            THREE.MathUtils.lerp(
+              a.z,b.z,t
+            );
+        }
+
+        system.geometry
+          .attributes.position
+          .needsUpdate = true;
+      }
+    );
+  }
+
+  updateDynamic(delta, elapsed) {
+    const scale =
+      intensityScale[
+        this.prefs.AnimationIntensity
+      ] || 1;
+
+    this.dynamic.forEach(
+      item => {
+        const speed =
+          item.speed * scale;
+
+        if (
+          item.type === 'rotateY'
+        ) {
+          item.object.rotation.y +=
+            delta * speed;
+        }
+
+        if (
+          item.type === 'rotateZ'
+        ) {
+          item.object.rotation.z +=
+            delta * speed;
+        }
+
+        if (
+          item.type === 'rotateZNeg'
+        ) {
+          item.object.rotation.z -=
+            delta * speed;
+        }
+
+        if (
+          item.type === 'float'
+        ) {
+          item.object.position.y =
+            Math.sin(
+              elapsed * speed
+            ) * 0.12;
+        }
+
+        if (
+          item.type === 'pulse'
+        ) {
+          const s =
+            1 +
+            Math.sin(
+              elapsed * speed
+            ) * 0.35;
+
+          item.object.scale.setScalar(s);
+        }
+
+        if (
+          item.type === 'radar'
+        ) {
+          item.object.rotation.z =
+            -elapsed * speed;
+        }
+      }
+    );
   }
 
   resize() {
     if (
       !this.renderer ||
-      !this.camera ||
-      !this.container
+      !this.camera
     ) {
       return;
     }
@@ -681,7 +1712,8 @@ class CoreScene {
     this.camera.aspect =
       width / height;
 
-    this.camera.updateProjectionMatrix();
+    this.camera
+      .updateProjectionMatrix();
 
     this.renderer.setSize(
       width,
@@ -690,103 +1722,32 @@ class CoreScene {
     );
   }
 
-  updatePackets(delta) {
-    if (
-      !this.packetGeometry ||
-      !this.packetTracks.length
-    ) {
-      return;
-    }
-
-    const positions =
-      this.packetGeometry
-        .attributes.position.array;
-
-    for (
-      let i = 0;
-      i < this.packetTracks.length;
-      i++
-    ) {
-      this.packetPhases[i] =
-        (
-          this.packetPhases[i] +
-          delta *
-          this.packetSpeeds[i] *
-          this.activity
-        ) % 1;
-
-      const [
-        start,
-        end
-      ] =
-        this.packetTracks[i];
-
-      const t =
-        this.packetPhases[i];
-
-      const index =
-        i * 3;
-
-      positions[index] =
-        THREE.MathUtils.lerp(
-          start.x,
-          end.x,
-          t
-        );
-
-      positions[index + 1] =
-        THREE.MathUtils.lerp(
-          start.y,
-          end.y,
-          t
-        );
-
-      positions[index + 2] =
-        THREE.MathUtils.lerp(
-          start.z,
-          end.z,
-          t
-        );
-    }
-
-    this.packetGeometry
-      .attributes.position
-      .needsUpdate = true;
-  }
-
-  shouldRender() {
-    if (
-      this.destroyed ||
-      !this.container ||
-      document.hidden
-    ) {
-      return false;
-    }
-
-    const parentSection =
-      this.mode === 'login'
-        ? document.getElementById('loginPage')
-        : document.getElementById('appPage');
-
-    return !!(
-      parentSection &&
-      !parentSection.classList.contains('hidden')
-    );
-  }
-
   animate = () => {
-    if (this.destroyed) return;
-
     requestAnimationFrame(
       this.animate
     );
 
     if (
-      !this.running ||
       !this.renderer ||
-      !this.shouldRender()
+      document.hidden ||
+      this.prefs.BackgroundScene ===
+        'off'
     ) {
       this.clock.getDelta();
+      return;
+    }
+
+    if (
+      isMobile() &&
+      this.prefs.ReduceMotionMobile
+    ) {
+      this.clock.getDelta();
+
+      this.renderer.render(
+        this.scene,
+        this.camera
+      );
+
       return;
     }
 
@@ -799,45 +1760,18 @@ class CoreScene {
     const elapsed =
       this.clock.elapsedTime;
 
-    const reduced =
-      prefersReducedMotion.matches;
-
-    if (!reduced) {
+    if (
+      !prefersReducedMotion.matches
+    ) {
       this.updatePackets(delta);
+      this.updateDynamic(
+        delta,
+        elapsed
+      );
 
-      if (this.mode === 'login') {
-        this.root.rotation.y +=
-          delta * 0.08 * this.activity;
-
-        this.root.rotation.x =
-          THREE.MathUtils.lerp(
-            this.root.rotation.x,
-            this.pointer.y * 0.10,
-            0.025
-          );
-
-        this.root.rotation.z =
-          THREE.MathUtils.lerp(
-            this.root.rotation.z,
-            -this.pointer.x * 0.07,
-            0.025
-          );
-
-        if (this.ringA) {
-          this.ringA.rotation.z +=
-            delta * 0.07;
-        }
-
-        if (this.ringB) {
-          this.ringB.rotation.z -=
-            delta * 0.05;
-        }
-
-        if (this.stars) {
-          this.stars.rotation.z +=
-            delta * 0.005;
-        }
-      } else {
+      if (
+        this.prefs.MouseParallax
+      ) {
         this.root.rotation.y =
           THREE.MathUtils.lerp(
             this.root.rotation.y,
@@ -848,29 +1782,9 @@ class CoreScene {
         this.root.rotation.x =
           THREE.MathUtils.lerp(
             this.root.rotation.x,
-            -0.08 +
             this.pointer.y * 0.018,
             0.02
           );
-
-        this.root.position.x =
-          THREE.MathUtils.lerp(
-            this.root.position.x,
-            this.pointer.x * 0.16,
-            0.02
-          );
-
-        this.root.position.y =
-          THREE.MathUtils.lerp(
-            this.root.position.y,
-            this.pointer.y * 0.10,
-            0.02
-          );
-
-        if (this.ringGroup) {
-          this.ringGroup.rotation.z =
-            elapsed * 0.025;
-        }
       }
     }
 
@@ -879,25 +1793,204 @@ class CoreScene {
       this.camera
     );
   };
-
-  destroy() {
-    this.destroyed = true;
-    this.running = false;
-
-    this.resizeObserver?.disconnect();
-
-    window.removeEventListener(
-      'pointermove',
-      this.onPointerMove
-    );
-
-    this.renderer?.dispose();
-
-    this.container?.replaceChildren();
-  }
 }
 
-function initCoreNetwork3D() {
+
+class LoginScene {
+  constructor(container) {
+    this.container = container;
+
+    if (
+      !container ||
+      !supportsWebGL()
+    ) {
+      return;
+    }
+
+    this.scene =
+      new THREE.Scene();
+
+    this.camera =
+      new THREE.PerspectiveCamera(
+        42,1,0.1,100
+      );
+
+    this.camera.position.z =
+      7.4;
+
+    this.renderer =
+      new THREE.WebGLRenderer({
+        alpha:true,
+        antialias:!isMobile()
+      });
+
+    this.renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        1.5
+      )
+    );
+
+    this.renderer.setSize(
+      container.clientWidth || 1,
+      container.clientHeight || 1,
+      false
+    );
+
+    this.renderer.domElement.className =
+      'three-core-canvas';
+
+    container.appendChild(
+      this.renderer.domElement
+    );
+
+    this.root =
+      new THREE.Group();
+
+    this.scene.add(this.root);
+
+    const points = [];
+
+    const golden =
+      Math.PI *
+      (
+        3 -
+        Math.sqrt(5)
+      );
+
+    for (
+      let i = 0;
+      i < 82;
+      i++
+    ) {
+      const y =
+        1 -
+        (
+          i / 81
+        ) * 2;
+
+      const r =
+        Math.sqrt(
+          Math.max(
+            0,
+            1 - y*y
+          )
+        );
+
+      const theta =
+        golden * i;
+
+      points.push(
+        new THREE.Vector3(
+          Math.cos(theta)*r*2.1,
+          y*2.1,
+          Math.sin(theta)*r*2.1
+        )
+      );
+    }
+
+    this.root.add(
+      new THREE.Points(
+        new THREE.BufferGeometry()
+          .setFromPoints(points),
+        new THREE.PointsMaterial({
+          color:0x32e7f5,
+          size:0.052,
+          transparent:true,
+          opacity:0.86,
+          blending:
+            THREE.AdditiveBlending,
+          depthWrite:false
+        })
+      )
+    );
+
+    this.root.add(
+      new THREE.Mesh(
+        new THREE.IcosahedronGeometry(
+          2.14,
+          2
+        ),
+        new THREE.MeshBasicMaterial({
+          color:0x6e63ff,
+          wireframe:true,
+          transparent:true,
+          opacity:0.06
+        })
+      )
+    );
+
+    this.root.position.x =
+      0.9;
+
+    this.clock =
+      new THREE.Clock();
+
+    new ResizeObserver(
+      () => this.resize()
+    ).observe(container);
+
+    this.animate();
+  }
+
+  resize() {
+    if (
+      !this.renderer
+    ) {
+      return;
+    }
+
+    const w =
+      this.container.clientWidth || 1;
+
+    const h =
+      this.container.clientHeight || 1;
+
+    this.camera.aspect =
+      w / h;
+
+    this.camera
+      .updateProjectionMatrix();
+
+    this.renderer.setSize(
+      w,h,false
+    );
+  }
+
+  animate = () => {
+    requestAnimationFrame(
+      this.animate
+    );
+
+    if (
+      !this.renderer ||
+      document.hidden
+    ) {
+      return;
+    }
+
+    const delta =
+      Math.min(
+        this.clock.getDelta(),
+        0.04
+      );
+
+    if (
+      !prefersReducedMotion.matches
+    ) {
+      this.root.rotation.y +=
+        delta * 0.07;
+    }
+
+    this.renderer.render(
+      this.scene,
+      this.camera
+    );
+  };
+}
+
+
+function initThreeCore() {
   const loginContainer =
     document.getElementById(
       'threeLoginCore'
@@ -908,147 +2001,89 @@ function initCoreNetwork3D() {
       'threeAppCore'
     );
 
-  if (
-    !loginContainer &&
-    !appContainer
-  ) {
-    return;
-  }
-
-  const loginScene =
+  const login =
     loginContainer
-      ? new CoreScene(
-          loginContainer,
-          'login'
+      ? new LoginScene(
+          loginContainer
         )
       : null;
 
-  const appScene =
+  const app =
     appContainer
-      ? new CoreScene(
-          appContainer,
-          'app'
+      ? new AppSceneEngine(
+          appContainer
         )
       : null;
 
-  const applyPageMode =
-    page => {
-      const normalized =
-        String(page || '')
-          .toLowerCase();
+  const initial =
+    normalizePrefs(
+      window.MLNAppearancePreferences
+    );
 
-      const dashboard =
-        normalized === 'dashboard';
+  app?.setPreferences(initial);
 
-      appContainer?.classList.toggle(
-        'is-dashboard',
-        dashboard
+  window.addEventListener(
+    'mln:appearance-change',
+    event => {
+      app?.setPreferences(
+        event.detail?.preferences
       );
+    }
+  );
 
-      appContainer?.classList.toggle(
-        'is-secondary-page',
-        !dashboard
+  window.addEventListener(
+    'mln:appearance-reset',
+    () => {
+      app?.setPreferences(
+        DEFAULTS
       );
-
-      appScene?.setActivity(
-        dashboard ? 1.25 : 0.62
-      );
-    };
+    }
+  );
 
   window.addEventListener(
     'mln:page-change',
     event => {
-      applyPageMode(
+      app?.setPage(
         event.detail?.page
       );
     }
   );
 
-  window.addEventListener(
-    'mln:dashboard-metrics',
-    event => {
-      const metrics =
-        event.detail || {};
-
-      const total =
-        Number(
-          metrics.totalDevices || 0
-        );
-
-      const pending =
-        Number(
-          metrics.pendingPermits || 0
-        );
-
-      const flow =
-        Number(
-          metrics.deviceInThisMonth || 0
-        ) +
-        Number(
-          metrics.deviceOutThisMonth || 0
-        );
-
-      const activity =
-        0.9 +
-        Math.min(total, 120) / 180 +
-        Math.min(pending, 8) * 0.05 +
-        Math.min(flow, 20) * 0.015;
-
-      appScene?.setActivity(
-        activity
-      );
-    }
-  );
-
-  const title =
-    document.getElementById(
-      'topTitle'
-    );
-
-  if (title) {
-    const observer =
-      new MutationObserver(() => {
-        const text =
-          title.textContent || '';
-
-        applyPageMode(
-          /overview|dashboard/i.test(text)
-            ? 'dashboard'
-            : 'secondary'
-        );
-      });
-
-    observer.observe(
-      title,
-      {
-        childList: true,
-        characterData: true,
-        subtree: true
-      }
-    );
-
-    applyPageMode(
-      /overview|dashboard/i.test(
-        title.textContent || ''
-      )
-        ? 'dashboard'
-        : 'secondary'
-    );
-  }
-
   window.MLNThreeCore = {
-    loginScene,
-    appScene,
-    version: 'V9-r187'
+    login,
+    app,
+    setPreferences:
+      prefs =>
+        app?.setPreferences(prefs),
+    setScene:
+      scene =>
+        app?.setPreferences(
+          Object.assign(
+            {},
+            app.prefs,
+            {
+              BackgroundScene:
+                scene
+            }
+          )
+        ),
+    version:
+      'V10-SceneSettings'
   };
 }
 
-if (document.readyState === 'loading') {
+
+if (
+  document.readyState ===
+  'loading'
+) {
   document.addEventListener(
     'DOMContentLoaded',
-    initCoreNetwork3D,
-    { once: true }
+    initThreeCore,
+    {
+      once:true
+    }
   );
 } else {
-  initCoreNetwork3D();
+  initThreeCore();
 }

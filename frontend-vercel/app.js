@@ -4,7 +4,8 @@ const state = {
   permissions: [],
   master: null,
   page: 'dashboard',
-  charts: []
+  charts: [],
+  appearance: null
 };
 
 let deviceScope = 'DC';
@@ -35,6 +36,447 @@ function ticketCanDelete() {
 }
 
 const can = p => state.permissions.includes('*') || state.permissions.includes(p);
+
+
+const APPEARANCE_DEFAULTS = Object.freeze({
+  BackgroundScene: 'core-network-mesh',
+  AnimationIntensity: 'NORMAL',
+  BackgroundOpacity: 33,
+  MouseParallax: true,
+  DataFlow: true,
+  ReduceMotionMobile: true
+});
+
+const THREE_SCENES = Object.freeze([
+  {
+    id: 'off',
+    name: 'Off / Static',
+    icon: 'bi-slash-circle',
+    desc: 'Matikan background animasi Three.js.'
+  },
+  {
+    id: 'network-globe',
+    name: 'Network Globe',
+    icon: 'bi-globe2',
+    desc: 'Globe jaringan dengan node dan koneksi backbone.'
+  },
+  {
+    id: 'core-network-mesh',
+    name: 'Core Network Mesh',
+    icon: 'bi-diagram-3',
+    desc: 'Mesh core network dengan node dan data flow.'
+  },
+  {
+    id: 'cyber-grid',
+    name: 'Cyber Grid',
+    icon: 'bi-grid-3x3',
+    desc: 'Grid perspektif futuristik bernuansa NOC.'
+  },
+  {
+    id: 'data-stream',
+    name: 'Data Stream',
+    icon: 'bi-arrow-down-up',
+    desc: 'Aliran paket data bercahaya melintasi layar.'
+  },
+  {
+    id: 'network-topology',
+    name: 'Network Topology',
+    icon: 'bi-bezier2',
+    desc: 'Topologi router, switch, OLT dan link.'
+  },
+  {
+    id: 'data-center-core',
+    name: 'Data Center Core',
+    icon: 'bi-server',
+    desc: 'Visual rack/server core pada Data Center.'
+  },
+  {
+    id: 'pop-network-map',
+    name: 'POP Network Map',
+    icon: 'bi-map',
+    desc: 'Node POP/site dan jalur koneksi antar lokasi.'
+  },
+  {
+    id: 'fiber-backbone',
+    name: 'Fiber Backbone',
+    icon: 'bi-bezier',
+    desc: 'Backbone fiber bercahaya dengan packet pulse.'
+  },
+  {
+    id: 'incident-alert',
+    name: 'Incident Alert',
+    icon: 'bi-exclamation-triangle',
+    desc: 'Network core dengan node incident merah/oranye.'
+  },
+  {
+    id: 'digital-city-nodes',
+    name: 'Digital City Nodes',
+    icon: 'bi-buildings',
+    desc: 'Kota digital dan node jaringan antar wilayah.'
+  },
+  {
+    id: 'particle-field',
+    name: 'Particle Field',
+    icon: 'bi-stars',
+    desc: 'Particle ringan untuk background minimalis.'
+  },
+  {
+    id: 'hex-tech-grid',
+    name: 'Hex / Tech Grid',
+    icon: 'bi-hexagon',
+    desc: 'Pola hexagonal tech dengan glow tipis.'
+  },
+  {
+    id: 'radar-core',
+    name: 'Radar Core',
+    icon: 'bi-radar',
+    desc: 'Radar NOC dengan sweep dan target node.'
+  },
+  {
+    id: 'orbital-core',
+    name: 'Orbital Core',
+    icon: 'bi-circle',
+    desc: 'Core sphere dengan orbital data ring.'
+  },
+  {
+    id: 'server-matrix',
+    name: 'Server Matrix',
+    icon: 'bi-hdd-rack',
+    desc: 'Matrix server/rack bergaya Data Center.'
+  }
+]);
+
+
+function normalizeAppearanceSettings(input) {
+  const p =
+    Object.assign(
+      {},
+      APPEARANCE_DEFAULTS,
+      input || {}
+    );
+
+  p.BackgroundOpacity =
+    Math.max(
+      0,
+      Math.min(
+        60,
+        Number(p.BackgroundOpacity) || 0
+      )
+    );
+
+  p.AnimationIntensity =
+    [
+      'LOW',
+      'NORMAL',
+      'HIGH'
+    ].includes(
+      String(
+        p.AnimationIntensity
+      ).toUpperCase()
+    )
+      ? String(
+          p.AnimationIntensity
+        ).toUpperCase()
+      : 'NORMAL';
+
+  p.MouseParallax =
+    p.MouseParallax === true ||
+    String(p.MouseParallax) === 'true';
+
+  p.DataFlow =
+    p.DataFlow === true ||
+    String(p.DataFlow) === 'true';
+
+  p.ReduceMotionMobile =
+    p.ReduceMotionMobile === true ||
+    String(p.ReduceMotionMobile) === 'true';
+
+  return p;
+}
+
+
+function applyAppearanceSettings(
+  prefs,
+  preview = false
+) {
+  const normalized =
+    normalizeAppearanceSettings(
+      prefs
+    );
+
+  if (!preview) {
+    state.appearance =
+      normalized;
+
+    try {
+      localStorage.setItem(
+        'mln_appearance_cache',
+        JSON.stringify(
+          normalized
+        )
+      );
+    } catch (_) {}
+  }
+
+  window.MLNAppearancePreferences =
+    normalized;
+
+  window.dispatchEvent(
+    new CustomEvent(
+      'mln:appearance-change',
+      {
+        detail:{
+          preferences:
+            normalized,
+          preview
+        }
+      }
+    )
+  );
+}
+
+
+async function loadAppearanceSettings() {
+  let fallback =
+    APPEARANCE_DEFAULTS;
+
+  try {
+    const cached =
+      JSON.parse(
+        localStorage.getItem(
+          'mln_appearance_cache'
+        ) || 'null'
+      );
+
+    if (cached) {
+      fallback =
+        normalizeAppearanceSettings(
+          cached
+        );
+    }
+  } catch (_) {}
+
+  applyAppearanceSettings(
+    fallback
+  );
+
+  try {
+    const r =
+      await gas(
+        'getMyAppearanceSettings',
+        state.token
+      );
+
+    if (r?.success) {
+      applyAppearanceSettings(
+        r.data
+      );
+
+      return r.data;
+    }
+  } catch (e) {
+    console.warn(
+      'Appearance settings:',
+      e
+    );
+  }
+
+  return fallback;
+}
+
+
+function readAppearanceForm() {
+  return {
+    BackgroundScene:
+      val('appearanceScene') ||
+      APPEARANCE_DEFAULTS.BackgroundScene,
+
+    AnimationIntensity:
+      val('appearanceIntensity') ||
+      'NORMAL',
+
+    BackgroundOpacity:
+      Number(
+        val('appearanceOpacity')
+      ),
+
+    MouseParallax:
+      !!document.getElementById(
+        'appearanceParallax'
+      )?.checked,
+
+    DataFlow:
+      !!document.getElementById(
+        'appearanceDataFlow'
+      )?.checked,
+
+    ReduceMotionMobile:
+      !!document.getElementById(
+        'appearanceReduceMobile'
+      )?.checked
+  };
+}
+
+
+function previewAppearanceSettings() {
+  const prefs =
+    readAppearanceForm();
+
+  const output =
+    document.getElementById(
+      'appearanceOpacityValue'
+    );
+
+  if (output) {
+    output.textContent =
+      `${prefs.BackgroundOpacity}%`;
+  }
+
+  const scene =
+    THREE_SCENES.find(
+      x =>
+        x.id ===
+        prefs.BackgroundScene
+    );
+
+  const previewTitle =
+    document.getElementById(
+      'appearancePreviewTitle'
+    );
+
+  const previewDesc =
+    document.getElementById(
+      'appearancePreviewDesc'
+    );
+
+  if (previewTitle) {
+    previewTitle.textContent =
+      scene?.name ||
+      'Background Scene';
+  }
+
+  if (previewDesc) {
+    previewDesc.textContent =
+      scene?.desc || '';
+  }
+
+  applyAppearanceSettings(
+    prefs,
+    true
+  );
+}
+
+
+async function saveAppearanceSettingsUI() {
+  const btn =
+    document.getElementById(
+      'saveAppearanceBtn'
+    );
+
+  busy(btn, true);
+
+  try {
+    const prefs =
+      readAppearanceForm();
+
+    const r =
+      await gas(
+        'saveMyAppearanceSettings',
+        state.token,
+        prefs
+      );
+
+    err(r);
+
+    applyAppearanceSettings(
+      r.data || prefs
+    );
+
+    toast(
+      r.message ||
+      'Pengaturan background berhasil disimpan.'
+    );
+
+  } catch (e) {
+    toast(
+      e.message ||
+      'Pengaturan background gagal disimpan.',
+      'error'
+    );
+
+  } finally {
+    busy(btn, false);
+  }
+}
+
+
+function resetAppearanceSettingsUI() {
+  const p =
+    APPEARANCE_DEFAULTS;
+
+  const scene =
+    document.getElementById(
+      'appearanceScene'
+    );
+
+  const intensity =
+    document.getElementById(
+      'appearanceIntensity'
+    );
+
+  const opacity =
+    document.getElementById(
+      'appearanceOpacity'
+    );
+
+  const parallax =
+    document.getElementById(
+      'appearanceParallax'
+    );
+
+  const flow =
+    document.getElementById(
+      'appearanceDataFlow'
+    );
+
+  const mobile =
+    document.getElementById(
+      'appearanceReduceMobile'
+    );
+
+  if (scene) {
+    scene.value =
+      p.BackgroundScene;
+  }
+
+  if (intensity) {
+    intensity.value =
+      p.AnimationIntensity;
+  }
+
+  if (opacity) {
+    opacity.value =
+      p.BackgroundOpacity;
+  }
+
+  if (parallax) {
+    parallax.checked =
+      p.MouseParallax;
+  }
+
+  if (flow) {
+    flow.checked =
+      p.DataFlow;
+  }
+
+  if (mobile) {
+    mobile.checked =
+      p.ReduceMotionMobile;
+  }
+
+  previewAppearanceSettings();
+}
+
 
 function navItem(page, icon, label) {
   return `
@@ -146,6 +588,7 @@ async function enterApp() {
 
     buildNav();
     await loadMaster();
+    await loadAppearanceSettings();
     await navigate('dashboard');
     if (state.user?.MustChangePassword) openChangePassword();
   } catch (e) {
@@ -167,7 +610,14 @@ async function logoutApp(){
     state.user=null;
     state.permissions=[];
     state.master=null;
+    state.appearance=null;
     state.page='dashboard';
+
+    window.dispatchEvent(
+      new CustomEvent(
+        'mln:appearance-reset'
+      )
+    );
     state.charts.forEach(c=>{try{c.destroy()}catch(_){}});
     state.charts=[];
     document.getElementById('nav').innerHTML='';
@@ -349,12 +799,14 @@ function buildNav() {
       'audit.view'
     )}
 
-    ${item(
-      'settings',
-      'bi-gear',
-      'Settings',
-      'settings.view'
-    )}
+    <a
+      class="nav-item"
+      data-page="settings"
+      onclick="navigate('settings')"
+    >
+      <i class="bi bi-gear"></i>
+      <span>Settings</span>
+    </a>
   `;
 
   $('#nav').innerHTML = html;
@@ -5721,7 +6173,419 @@ async function submitUser(){const f=$('#userForm');if(!f.reportValidity())return
 
 async function renderAudit(page=1){setTitle('Audit Log','Jejak aktivitas sistem');loading();const r=await gas('listAuditLogs',state.token,{page,pageSize:30});err(r);const d=r.data;$('#content').innerHTML=`<div class="mb-3"><h1 class="page-title">Audit Log</h1></div><div class="cardx">${table(['Waktu','User','Action','Module','Reference','Description'],d.rows.map(x=>`<tr><td>${esc(x.Timestamp)}</td><td>${esc(x.Username)}</td><td>${esc(x.Action)}</td><td>${esc(x.Module)}</td><td>${esc(x.ReferenceID)}</td><td>${esc(x.Description)}</td></tr>`).join(''))}${pager(d,'renderAudit')}</div>`}
 
-async function renderSettings(){setTitle('Settings','Konfigurasi aplikasi');loading();const r=await gas('getSettings',state.token);err(r);$('#content').innerHTML=`<div class="mb-3"><h1 class="page-title">Settings</h1></div><div class="cardx">${table(['Key','Value','Description','Updated'],r.data.map(x=>`<tr><td><strong>${esc(x.Key)}</strong></td><td>${esc(x.Value)}</td><td>${esc(x.Description)}</td><td>${esc(x.UpdatedAt)}</td></tr>`).join(''))}</div>`}
+async function renderSettings() {
+  setTitle(
+    'SETTINGS',
+    'Appearance & konfigurasi aplikasi'
+  );
+
+  loading();
+
+  try {
+    let prefs =
+      state.appearance ||
+      APPEARANCE_DEFAULTS;
+
+    const appearanceResult =
+      await gas(
+        'getMyAppearanceSettings',
+        state.token
+      ).catch(
+        () => null
+      );
+
+    if (
+      appearanceResult?.success
+    ) {
+      prefs =
+        normalizeAppearanceSettings(
+          appearanceResult.data
+        );
+
+      applyAppearanceSettings(
+        prefs
+      );
+    }
+
+    let systemSettings = [];
+
+    if (can('settings.view')) {
+      const systemResult =
+        await gas(
+          'getSettings',
+          state.token
+        );
+
+      if (systemResult?.success) {
+        systemSettings =
+          systemResult.data || [];
+      }
+    }
+
+    $('#content').innerHTML = `
+      <div class="settings-page-head">
+        <div>
+          <h1 class="page-title">
+            Settings
+          </h1>
+
+          <div class="page-sub">
+            Atur tampilan pribadi dan konfigurasi aplikasi
+          </div>
+        </div>
+
+        <span class="settings-user-chip">
+          <i class="bi bi-person-circle"></i>
+          ${esc(
+            state.user?.Nama ||
+            state.user?.Username ||
+            'User'
+          )}
+        </span>
+      </div>
+
+      <div class="settings-layout">
+
+        <section class="cardx appearance-settings-card">
+          <div class="settings-section-head">
+            <div>
+              <div class="settings-eyebrow">
+                APPEARANCE
+              </div>
+
+              <h3>
+                Three.js Background Scene
+              </h3>
+
+              <p>
+                Pilih animasi background yang digunakan pada aplikasi Anda.
+                Pengaturan ini tersimpan khusus untuk akun ini.
+              </p>
+            </div>
+
+            <div class="settings-section-icon">
+              <i class="bi bi-stars"></i>
+            </div>
+          </div>
+
+          <div class="appearance-preview-shell">
+            <div class="appearance-preview-grid"></div>
+
+            <div class="appearance-preview-content">
+              <span class="appearance-live-badge">
+                <span></span>
+                LIVE PREVIEW
+              </span>
+
+              <div>
+                <h4 id="appearancePreviewTitle">
+                  ${esc(
+                    THREE_SCENES.find(
+                      x =>
+                        x.id ===
+                        prefs.BackgroundScene
+                    )?.name ||
+                    'Core Network Mesh'
+                  )}
+                </h4>
+
+                <p id="appearancePreviewDesc">
+                  ${esc(
+                    THREE_SCENES.find(
+                      x =>
+                        x.id ===
+                        prefs.BackgroundScene
+                    )?.desc ||
+                    ''
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="appearance-form-grid">
+
+            <div class="appearance-field appearance-field-wide">
+              <label class="form-label">
+                Background Scene
+              </label>
+
+              <select
+                id="appearanceScene"
+                class="form-select"
+                onchange="previewAppearanceSettings()"
+              >
+                ${THREE_SCENES.map(scene => `
+                  <option
+                    value="${scene.id}"
+                    ${
+                      prefs.BackgroundScene ===
+                      scene.id
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${esc(scene.name)}
+                  </option>
+                `).join('')}
+              </select>
+
+              <div class="form-text">
+                Scene dapat diganti kapan saja tanpa mengubah source code.
+              </div>
+            </div>
+
+            <div class="appearance-field">
+              <label class="form-label">
+                Animation Intensity
+              </label>
+
+              <select
+                id="appearanceIntensity"
+                class="form-select"
+                onchange="previewAppearanceSettings()"
+              >
+                ${[
+                  ['LOW','Low'],
+                  ['NORMAL','Normal'],
+                  ['HIGH','High']
+                ].map(([value,label]) => `
+                  <option
+                    value="${value}"
+                    ${
+                      prefs.AnimationIntensity ===
+                      value
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${label}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div class="appearance-field appearance-opacity-field">
+              <div class="appearance-label-row">
+                <label class="form-label">
+                  Background Opacity
+                </label>
+
+                <strong id="appearanceOpacityValue">
+                  ${Number(prefs.BackgroundOpacity)}%
+                </strong>
+              </div>
+
+              <input
+                id="appearanceOpacity"
+                type="range"
+                min="0"
+                max="60"
+                step="1"
+                value="${Number(prefs.BackgroundOpacity)}"
+                oninput="previewAppearanceSettings()"
+              >
+            </div>
+          </div>
+
+          <div class="appearance-toggle-list">
+
+            ${appearanceToggle(
+              'appearanceParallax',
+              'Mouse Parallax',
+              'Scene mengikuti gerakan pointer secara halus.',
+              'bi-mouse',
+              prefs.MouseParallax
+            )}
+
+            ${appearanceToggle(
+              'appearanceDataFlow',
+              'Data Flow Animation',
+              'Aktifkan packet / data-flow pada scene yang mendukung.',
+              'bi-arrow-left-right',
+              prefs.DataFlow
+            )}
+
+            ${appearanceToggle(
+              'appearanceReduceMobile',
+              'Reduce Animation on Mobile',
+              'Kurangi detail dan animasi untuk menjaga performa perangkat mobile.',
+              'bi-phone',
+              prefs.ReduceMotionMobile
+            )}
+
+          </div>
+
+          <div class="appearance-actions">
+            <button
+              type="button"
+              class="btn btn-light"
+              onclick="resetAppearanceSettingsUI()"
+            >
+              <i class="bi bi-arrow-counterclockwise me-1"></i>
+              Reset Default
+            </button>
+
+            <button
+              id="saveAppearanceBtn"
+              type="button"
+              class="btn btn-primary"
+              onclick="saveAppearanceSettingsUI()"
+            >
+              <i class="bi bi-check-lg me-1"></i>
+              Simpan Pengaturan
+            </button>
+          </div>
+        </section>
+
+        <aside class="settings-scene-catalog">
+          <div class="settings-catalog-head">
+            <span>SCENE CATALOG</span>
+            <strong>
+              ${THREE_SCENES.length} Scene
+            </strong>
+          </div>
+
+          <div class="scene-catalog-list">
+            ${THREE_SCENES.map(scene => `
+              <button
+                type="button"
+                class="scene-catalog-item ${
+                  prefs.BackgroundScene ===
+                  scene.id
+                    ? 'active'
+                    : ''
+                }"
+                data-scene-id="${scene.id}"
+                onclick="
+                  document.getElementById('appearanceScene').value='${scene.id}';
+                  document.querySelectorAll('.scene-catalog-item').forEach(x=>x.classList.remove('active'));
+                  this.classList.add('active');
+                  previewAppearanceSettings();
+                "
+              >
+                <span class="scene-catalog-icon">
+                  <i class="bi ${scene.icon}"></i>
+                </span>
+
+                <span class="scene-catalog-copy">
+                  <strong>${esc(scene.name)}</strong>
+                  <small>${esc(scene.desc)}</small>
+                </span>
+
+                <i class="bi bi-chevron-right scene-catalog-arrow"></i>
+              </button>
+            `).join('')}
+          </div>
+        </aside>
+      </div>
+
+      ${can('settings.view') ? `
+        <section class="cardx system-settings-card mt-4">
+          <div class="settings-section-head">
+            <div>
+              <div class="settings-eyebrow">
+                SYSTEM
+              </div>
+
+              <h3>
+                System Settings
+              </h3>
+
+              <p>
+                Konfigurasi global backend aplikasi.
+              </p>
+            </div>
+
+            <div class="settings-section-icon">
+              <i class="bi bi-sliders"></i>
+            </div>
+          </div>
+
+          ${table(
+            [
+              'Key',
+              'Value',
+              'Description',
+              'Updated'
+            ],
+            systemSettings.map(x => `
+              <tr>
+                <td>
+                  <strong>
+                    ${esc(x.Key)}
+                  </strong>
+                </td>
+
+                <td>
+                  ${esc(x.Value)}
+                </td>
+
+                <td>
+                  ${esc(x.Description)}
+                </td>
+
+                <td>
+                  ${esc(x.UpdatedAt)}
+                </td>
+              </tr>
+            `).join('')
+          )}
+        </section>
+      ` : ''}
+    `;
+
+    previewAppearanceSettings();
+
+  } catch (e) {
+    console.error(
+      'renderSettings:',
+      e
+    );
+
+    $('#content').innerHTML =
+      errorCard(
+        'Settings gagal dimuat',
+        e.message
+      );
+  }
+}
+
+
+function appearanceToggle(
+  id,
+  title,
+  description,
+  icon,
+  checked
+) {
+  return `
+    <label
+      class="appearance-toggle-row"
+      for="${id}"
+    >
+      <span class="appearance-toggle-icon">
+        <i class="bi ${icon}"></i>
+      </span>
+
+      <span class="appearance-toggle-copy">
+        <strong>${esc(title)}</strong>
+        <small>${esc(description)}</small>
+      </span>
+
+      <span class="appearance-switch">
+        <input
+          id="${id}"
+          type="checkbox"
+          ${checked ? 'checked' : ''}
+          onchange="previewAppearanceSettings()"
+        >
+
+        <span></span>
+      </span>
+    </label>
+  `;
+}
 
 
 function openForgotPassword(){
